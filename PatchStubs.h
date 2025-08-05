@@ -1,0 +1,2 @@
+VOID AntiMaphackPatch();
+VOID DrawManaOrbSTUB();
