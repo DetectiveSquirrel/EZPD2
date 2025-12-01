@@ -16,15 +16,20 @@ VOID Reveal::RevealAutomap()
 	if (!V_MapHackEnabled)
 		return;
 
+	Level *CurrentLevel = GetUnitLevel(Me);
+	if (!CurrentLevel)
+		return;
+
+	if (CurrentLevel->dwLevelNo == 161 ||
+		CurrentLevel->dwLevelNo == 162 ||
+		CurrentLevel->dwLevelNo == 163)
+		return;
+
 	if (!Me || !Me->pPath || !Me->pPath->pRoom1)
 		return;
 
 	Act *pAct = Me->pAct;
 	if (!pAct || !pAct->pMisc)
-		return;
-
-	Level *CurrentLevel = GetUnitLevel(Me);
-	if (!CurrentLevel)
 		return;
 
 	if (CurrentLevel->dwLevelNo != PreviousLevel)
@@ -198,7 +203,7 @@ VOID Reveal::RevealRoom1(LPROOM2 pRoom)
 			}
 			else
 			{
-				for (size_t i = 0; i < sizeof(trackedMapMonsters) / sizeof(trackedMapMonsters[0]); ++i)	
+				for (size_t i = 0; i < sizeof(trackedMapMonsters) / sizeof(trackedMapMonsters[0]); ++i)
 				{
 					if (pUnit->dwTxtFileNo == trackedMapMonsters[i].dwClassId)
 					{

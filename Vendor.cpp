@@ -91,6 +91,9 @@ VOID VendorShortcut()
     }
 }
 
+DWORD tradeWindowOpenTick = 0;
+bool tradeWindowTickSet = false;
+
 VOID AnyaBot()
 {
     if (!V_AnyaBotRunning)
@@ -103,9 +106,10 @@ VOID AnyaBot()
     BOOL vendorActive = GetUIVar(UI_NPCMENU) == 1;
     BOOL tradeActive = GetUIVar(UI_NPCSHOP) == 1;
 
-    // If in town and items not checked yet
+    // --- STATE 1: Find and interact with the vendor ---
     if ((playerLevel->dwLevelNo == MAP_A5_HARROGATH || playerLevel->dwLevelNo == MAP_A1_ROGUE_ENCAMPMENT) && !V_AnyaBotCheckedItems && !vendorActive)
     {
+        tradeWindowOpenTick = 0;
         for (LPROOM1 Room = Me->pAct->pRoom1; Room; Room = Room->pRoomNext)
         {
             for (LPUNITANY Unit = Room->pUnitFirst; Unit; Unit = Unit->pListNext)
@@ -117,16 +121,14 @@ VOID AnyaBot()
                     POINT screenPos = {xPos, yPos};
                     WorldToScreen(&screenPos);
 
-                    // Check if item is in pickit area
                     RECT clickableArea = GetSafeScreenAreaRect();
-                    if (!IsPointInRect(screenPos, clickableArea))
-                    {
-                        PrintText(FONTCOLOR_RED, "Vendor is outside of clickable area");
-                        ExitAnyaBot();
-                        return;
-                    }
+                    //if (!IsPointInRect(screenPos, clickableArea))
+                    //{
+                    //    PrintText(FONTCOLOR_RED, "Vendor is outside of clickable area");
+                    //    ExitAnyaBot();
+                    //    return;
+                    //}
 
-                    // Need to mouseover vendor first, else the click will not register
                     if (V_TickCount == 35)
                     {
                         SetCursorPos(screenPos.x, screenPos.y);
@@ -142,74 +144,61 @@ VOID AnyaBot()
         }
     }
 
-    // Click on "Trade" once the vendor becomes active
+    // --- STATE 2: Click "Trade" in the vendor menu ---
     if (vendorActive && !tradeActive && !V_AnyaBotCheckedItems)
     {
         if (V_TickCount == 25)
         {
-            // LPUNITANY vendor = D2CLIENT_GetCurrentInteractingNPC();
-            // if (!vendor)
-            //     return;
-
-            // WORD xPos = D2CLIENT_GetUnitX(vendor);
-            // WORD yPos = D2CLIENT_GetUnitY(vendor);
-            // POINT screenPos = {xPos, yPos};
-            // WorldToScreen(&screenPos);
-
-            // screenPos.y -= 125;
-
-            // SimulateLeftClick(screenPos);
-            // return;
-
             SimulateKeyPress(VK_DOWN);
             SimulateKeyPress(VK_RETURN);
             return;
         }
     }
 
-    // Check for items once Trade window is active
+    // --- STATE 3: Manage the open trade window and item checking ---
+
     if (tradeActive && !V_AnyaBotCheckedItems)
     {
-        LPUNITANY vendor = D2CLIENT_GetCurrentInteractingNPC();
-        if (!vendor)
-            return;
-
-        // Get the vendor's inventory
-        LPINVENTORY vendorInventory = vendor->pInventory;
-        if (!vendorInventory)
-            return;
-
-        if (strlen(ITEM_NAME_SEARCH) == 0)
-            return; // Don't search for an empty string
-
-        for (LPUNITANY pItem = vendor->pInventory->pFirstItem; pItem; pItem = (pItem->pItemData ? pItem->pItemData->pNextInvItem : NULL))
+        if (!tradeWindowTickSet)
         {
-            if (pItem && pItem->pItemData)
+            tradeWindowOpenTick = V_TickCount;
+            tradeWindowTickSet = true;
+            return;
+        }
+
+        if (V_TickCount != tradeWindowOpenTick)
+            return;
+
+        LPUNITANY vendor = D2CLIENT_GetCurrentInteractingNPC();
+        if (vendor && vendor->pInventory && strlen(ITEM_NAME_SEARCH) > 0)
+        {
+            for (LPUNITANY pItem = vendor->pInventory->pFirstItem; pItem; pItem = (pItem->pItemData ? pItem->pItemData->pNextInvItem : NULL))
             {
-                wchar_t wFullDesc[2048];
-                D2CLIENT_GetItemName(pItem, wFullDesc, sizeof(wFullDesc) / sizeof(wFullDesc[0]));
-
-                char szFullDesc[2048];
-                WideCharToMultiByte(CP_ACP, 0, wFullDesc, -1, szFullDesc, sizeof(szFullDesc), NULL, NULL);
-
-                // Create a clean, lowercase version of the full description for searching
-                char cleanedDesc[2048];
-                CreateCleanItemName(szFullDesc, cleanedDesc, sizeof(cleanedDesc));
-
-                if (strstr(cleanedDesc, ITEM_NAME_SEARCH) != NULL)
+                if (pItem && pItem->pItemData)
                 {
-                    PrintText(FONTCOLOR_YELLOW, "Found Item to buy");
-                    ExitAnyaBot();
-                    return;
+                    wchar_t wFullDesc[2048];
+                    D2CLIENT_GetItemName(pItem, wFullDesc, sizeof(wFullDesc) / sizeof(wFullDesc[0]));
+                    char szFullDesc[2048];
+                    WideCharToMultiByte(CP_ACP, 0, wFullDesc, -1, szFullDesc, sizeof(szFullDesc), NULL, NULL);
+                    char cleanedDesc[2048];
+                    CreateCleanItemName(szFullDesc, cleanedDesc, sizeof(cleanedDesc));
+
+                    if (strstr(cleanedDesc, ITEM_NAME_SEARCH) != NULL)
+                    {
+                        PrintText(FONTCOLOR_YELLOW, "Found Item to buy");
+                        ExitAnyaBot();
+                        return;
+                    }
                 }
             }
         }
 
         D2CLIENT_CloseInteract();
         V_AnyaBotCheckedItems = TRUE;
-        return;
+        tradeWindowTickSet = false;
     }
 
+    // --- STATE 4: Find and click the portal to leave town ---
     if ((playerLevel->dwLevelNo == MAP_A5_HARROGATH || playerLevel->dwLevelNo == MAP_A1_ROGUE_ENCAMPMENT) && V_AnyaBotCheckedItems && Me->dwMode == PLAYER_MODE_STAND_INTOWN)
     {
         for (LPROOM1 Room = Me->pAct->pRoom1; Room; Room = Room->pRoomNext)
@@ -223,14 +212,13 @@ VOID AnyaBot()
                     POINT screenPos = {xPos, yPos};
                     WorldToScreen(&screenPos);
 
-                    // Check if item is in pickit area
                     RECT clickableArea = GetSafeScreenAreaRect();
-                    if (!IsPointInRect(screenPos, clickableArea))
-                    {
-                        PrintText(FONTCOLOR_RED, "Portal is outside of clickable area");
-                        ExitAnyaBot();
-                        return;
-                    }
+                    //if (!IsPointInRect(screenPos, clickableArea))
+                    //{
+                    //    PrintText(FONTCOLOR_RED, "Portal is outside of clickable area");
+                    //    ExitAnyaBot();
+                    //    return;
+                    //}
 
                     if (V_TickCount == 35)
                     {
@@ -247,29 +235,29 @@ VOID AnyaBot()
         }
     }
 
+    // --- STATE 5: Return from outside of town ---
     if ((playerLevel->dwLevelNo == MAP_A5_NIHLATHAKS_TEMPLE || playerLevel->dwLevelNo == MAP_PVP_MOOR_ARENA) && Me->dwMode == PLAYER_MODE_STAND_OUTTOWN)
     {
-        V_AnyaBotCheckedItems = FALSE;
+        V_AnyaBotCheckedItems = FALSE; // Reset for the next run
 
         for (LPROOM1 Room = Me->pAct->pRoom1; Room; Room = Room->pRoomNext)
         {
             for (LPUNITANY Unit = Room->pUnitFirst; Unit; Unit = Unit->pListNext)
             {
-                if (Unit && Unit->dwTxtFileNo == 60)
+                if (Unit && Unit->dwTxtFileNo == 60) // Portal ID
                 {
                     WORD xPos = D2CLIENT_GetUnitX(Unit);
                     WORD yPos = D2CLIENT_GetUnitY(Unit);
                     POINT screenPos = {xPos, yPos};
                     WorldToScreen(&screenPos);
 
-                    // Check if item is in pickit area
                     RECT clickableArea = GetSafeScreenAreaRect();
-                    if (!IsPointInRect(screenPos, clickableArea))
-                    {
-                        PrintText(FONTCOLOR_RED, "Portal is outside of clickable area");
-                        ExitAnyaBot();
-                        return;
-                    }
+                    //if (!IsPointInRect(screenPos, clickableArea))
+                    //{
+                    //    PrintText(FONTCOLOR_RED, "Portal is outside of clickable area");
+                    //    ExitAnyaBot();
+                    //    return;
+                    //}
 
                     if (V_TickCount == 35)
                     {
@@ -291,6 +279,7 @@ VOID ExitAnyaBot()
 {
     V_AnyaBotRunning = FALSE;
     V_AnyaBotCheckedItems = FALSE;
+    tradeWindowTickSet = false;
 
     PrintText(FONTCOLOR_RED, "Anya Bot stopped");
 }
