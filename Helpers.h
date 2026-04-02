@@ -1,3 +1,5 @@
+#pragma once
+
 #define ArraySize(X) (sizeof(X) / sizeof(X[0]))
 #define KeyDown(Code) ((GetAsyncKeyState(Code) & 0x8000) ? TRUE : FALSE)
 #define VALIDPTR(x) ((x) && (!IsBadReadPtr(x, sizeof(x))))

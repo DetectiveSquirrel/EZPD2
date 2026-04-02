@@ -1,3 +1,5 @@
+#pragma once
+
 #include "Matrix.h"
 
 #define MAP_DATA_NULL -1

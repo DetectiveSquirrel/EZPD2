@@ -2,8 +2,8 @@
 #define _D2STRUCTS_H
 
 #pragma once
+
 #include <string>
-using namespace std;
 
 struct AttackStruct;
 struct AutomapCell;
@@ -272,8 +272,8 @@ struct GameListEntry
 	DWORD dwIndex;
 	BYTE bPlayers;
 	DWORD dwStatus;
-	string sGameName;
-	string sGameDesc;
+	std::string sGameName;
+	std::string sGameDesc;
 };
 
 struct RoomTile

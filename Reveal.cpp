@@ -9,7 +9,7 @@ Reveal::~Reveal()
 {
 }
 
-DWORD PreviousLevel = 0;
+static DWORD PreviousLevel = 0;
 
 VOID Reveal::RevealAutomap()
 {

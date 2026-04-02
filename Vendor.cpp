@@ -91,9 +91,9 @@ VOID VendorShortcut()
     }
 }
 
-DWORD anyaStateTick = 0;
-AnyaBotState anyaState = ANYA_IDLE;
-int anyaRetries = 0;
+static DWORD anyaStateTick = 0;
+static AnyaBotState anyaState = ANYA_IDLE;
+static int anyaRetries = 0;
 
 VOID AnyaBot()
 {

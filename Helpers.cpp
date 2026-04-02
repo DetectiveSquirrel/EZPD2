@@ -44,21 +44,20 @@ VOID PrintText(DWORD Color, char *szText, ...)
 
 BOOL GameReady()
 {
-	if (!Me)
-		return FALSE;
-
-	if (VALIDPTR(D2CLIENT_GetPlayerUnit()) && !*p_D2WIN_FirstControl)
-		if (VALIDPTR(D2CLIENT_GetPlayerUnit()->pInventory))
-			if (VALIDPTR(D2CLIENT_GetPlayerUnit()->pPath))
-				if (D2CLIENT_GetPlayerUnit()->pPath->xPos)
-					if (VALIDPTR(D2CLIENT_GetPlayerUnit()->pPath->pRoom1))
-						if (VALIDPTR(D2CLIENT_GetPlayerUnit()->pPath->pRoom1->pRoom2))
-							if (VALIDPTR(D2CLIENT_GetPlayerUnit()->pPath->pRoom1->pRoom2->pLevel))
-								if (D2CLIENT_GetPlayerUnit()->pPath->pRoom1->pRoom2->pLevel->dwLevelNo)
-									if (VALIDPTR(D2CLIENT_GetPlayerUnit()->pAct))
-										if (GetPlayerArea() != NULL)
-											return TRUE;
-	return FALSE;
+	if (!Me) return FALSE;
+	LPUNITANY pUnit = D2CLIENT_GetPlayerUnit();
+	if (!VALIDPTR(pUnit)) return FALSE;
+	if (*p_D2WIN_FirstControl) return FALSE;
+	if (!VALIDPTR(pUnit->pInventory)) return FALSE;
+	if (!VALIDPTR(pUnit->pPath)) return FALSE;
+	if (!pUnit->pPath->xPos) return FALSE;
+	if (!VALIDPTR(pUnit->pPath->pRoom1)) return FALSE;
+	if (!VALIDPTR(pUnit->pPath->pRoom1->pRoom2)) return FALSE;
+	if (!VALIDPTR(pUnit->pPath->pRoom1->pRoom2->pLevel)) return FALSE;
+	if (!pUnit->pPath->pRoom1->pRoom2->pLevel->dwLevelNo) return FALSE;
+	if (!VALIDPTR(pUnit->pAct)) return FALSE;
+	if (!GetPlayerArea()) return FALSE;
+	return TRUE;
 }
 
 DWORD GetPlayerArea()

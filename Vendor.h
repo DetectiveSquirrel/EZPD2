@@ -1,3 +1,5 @@
+#pragma once
+
 #define ITEM_NAME_SEARCH "buy"
 
 struct VendorShortcut

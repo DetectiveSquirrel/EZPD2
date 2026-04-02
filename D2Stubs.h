@@ -1,3 +1,5 @@
+#pragma once
+
 DWORD FASTCALL InitAutomapLayerSTUB(DWORD dwLayer);
 DWORD FASTCALL GetUnitNameSTUB(DWORD Unit);
 DWORD FASTCALL GetUIVarSTUB(DWORD UI);

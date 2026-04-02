@@ -1,3 +1,5 @@
+#pragma once
+
 #ifdef VARS
 
 #define ARRAY(Type, Name) CArrayEx<Type, Type> V_##Name;
