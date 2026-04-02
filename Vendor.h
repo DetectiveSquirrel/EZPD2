@@ -37,4 +37,16 @@ static const int numVendorShortcuts = sizeof(vendorShortcuts) / sizeof(vendorSho
 VOID DrawVendorPreview();
 VOID AnyaBot();
 VOID ExitAnyaBot();
+VOID ResetAnyaBot();
 VOID VendorShortcut();
+
+enum AnyaBotState
+{
+    ANYA_IDLE,
+    ANYA_MOVING_TO_VENDOR,
+    ANYA_INTERACTING_VENDOR,
+    ANYA_SHOPPING,
+    ANYA_MOVING_TO_PORTAL,
+    ANYA_ENTERING_PORTAL,
+    ANYA_RETURNING
+};

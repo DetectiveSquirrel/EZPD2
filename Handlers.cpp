@@ -104,7 +104,7 @@ LONG STDCALL WindowProc(HWND HWnd, UINT MSG, WPARAM WParam, LPARAM LParam)
         }
         else if (MSG == WM_LBUTTONDOWN && V_MainMenuOpen)
         {
-            POINT mousePos = {*p_D2CLIENT_MouseX, *p_D2CLIENT_MouseY};
+            POINT mousePos = { *p_D2CLIENT_MouseX, *p_D2CLIENT_MouseY };
             HandleMenuClick(mousePos.x, mousePos.y);
         }
     }
@@ -151,10 +151,16 @@ VOID MainLoop()
 
 VOID InitializeHack()
 {
+    if (!V_OldWndProc && D2GFX_GetHwnd())
+    {
+        V_OldWndProc = (WNDPROC)SetWindowLongPtr(D2GFX_GetHwnd(), GWL_WNDPROC, (LONG)WindowProc);
+    }
+
     if (V_Initialized)
         return;
 
     LoadSettings();
+    if (V_MainMenuKey == 0) V_MainMenuKey = VK_F7;
     SetDefaultMenuVars();
     InitMenu();
 
@@ -169,6 +175,12 @@ VOID InitializeHack()
 
 VOID ShutdownHack()
 {
+    if (V_OldWndProc)
+    {
+        SetWindowLongPtr(D2GFX_GetHwnd(), GWL_WNDPROC, (LONG)V_OldWndProc);
+        V_OldWndProc = NULL;
+    }
+
     if (!V_Initialized)
         return;
 
@@ -201,6 +213,5 @@ VOID SetDefaultMenuVars()
 
     V_IsPickingUpItems = FALSE;
 
-    V_AnyaBotRunning = FALSE;
-    V_AnyaBotCheckedItems = FALSE;
+    ResetAnyaBot();
 }
