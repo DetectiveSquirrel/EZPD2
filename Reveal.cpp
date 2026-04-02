@@ -159,7 +159,7 @@ VOID Reveal::RevealRoom1(LPROOM2 pRoom)
 				::memset(LevelDesc, 0, sizeof(CAVEDESC));
 				GetMapName((INT)dwTargetLevel, szLevel, 0x40);
 
-				sprintf_s(LevelDesc->szName, szLevel);
+				sprintf_s(LevelDesc->szName, sizeof(LevelDesc->szName), "%s", szLevel);
 				LevelDesc->ptPos.x = unitWorldX - (8 << 1);
 				LevelDesc->ptPos.y = unitWorldY - 10;
 				LevelDesc->dwAct = Me->pAct->dwAct;
@@ -171,7 +171,7 @@ VOID Reveal::RevealRoom1(LPROOM2 pRoom)
 				{
 					if (dwTargetLevel == pRoom->pLevel->pMisc->dwStaffTombLevel)
 					{
-						strcpy_s(LevelDesc->szName, "True Tomb");
+						strcpy_s(LevelDesc->szName, sizeof(LevelDesc->szName), "True Tomb");
 					}
 					else
 					{
@@ -662,7 +662,10 @@ BOOL Reveal::GetLevelExits(LPLEVELEXIT *lpLevel, INT nMaxExits)
 						if ((ptCenters[j].y + m_LevelOrigin.y) >= (WORD)nRoomY && (ptCenters[j].y + m_LevelOrigin.y) <= (WORD)(nRoomY + (pRoom->dwSizeY * 5)))
 						{
 							if (nCurrentExit >= nMaxExits)
+							{
+								delete[] ptCenters;
 								return FALSE;
+							}
 
 							lpLevel[nCurrentExit] = new LEVELEXIT;
 							lpLevel[nCurrentExit]->dwTargetLevel = pNear[i]->pLevel->dwLevelNo;
@@ -692,6 +695,7 @@ BOOL Reveal::GetLevelExits(LPLEVELEXIT *lpLevel, INT nMaxExits)
 				if (bAdded)
 					D2COMMON_RemoveRoomData(Me->pAct, pRoom->pLevel->dwLevelNo, pRoom->dwPosX, pRoom->dwPosY, Me->pPath->pRoom1);
 
+				delete[] ptCenters;
 				return FALSE;
 			}
 
@@ -733,6 +737,7 @@ BOOL Reveal::GetLevelExits(LPLEVELEXIT *lpLevel, INT nMaxExits)
 			D2COMMON_RemoveRoomData(Me->pAct, pRoom->pLevel->dwLevelNo, pRoom->dwPosX, pRoom->dwPosY, Me->pPath->pRoom1);
 	}
 
+	delete[] ptCenters;
 	return TRUE;
 }
 
@@ -991,7 +996,7 @@ VOID Reveal::AddBoundaryLevelExits()
 							::memset(LevelDesc, 0, sizeof(CAVEDESC));
 
 							GetMapName((BYTE)dwTargetLevel, szLevelName, 0x40);
-							sprintf_s(LevelDesc->szName, "%s", szLevelName);
+							sprintf_s(LevelDesc->szName, sizeof(LevelDesc->szName), "%s", szLevelName);
 							LevelDesc->ptPos.x = worldPos.x - (8 << 1);
 							LevelDesc->ptPos.y = worldPos.y - 10;
 							LevelDesc->dwAct = Me->pAct->dwAct;

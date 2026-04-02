@@ -224,7 +224,7 @@ VOID SetEmptyBeltSlotVars()
   DWORD column4Count = 0;
 
   for (LPUNITANY Item = Me->pInventory->pFirstItem; Item;
-       Item = Item->pItemData->pNextInvItem)
+       Item = (Item->pItemData ? Item->pItemData->pNextInvItem : nullptr))
   {
     if (Item && Item->pItemData && GetItemLocation(Item) == STORAGE_BELT &&
         Item->pItemPath)
@@ -255,7 +255,7 @@ VOID SetEmptyBeltSlotVars()
 INT GetHotkeySlotForPotionType(INT potionType)
 {
   for (LPUNITANY Item = Me->pInventory->pFirstItem; Item;
-       Item = Item->pItemData->pNextInvItem)
+       Item = (Item->pItemData ? Item->pItemData->pNextInvItem : nullptr))
   {
     if (Item && Item->pItemData && GetItemLocation(Item) == STORAGE_BELT &&
         Item->pItemPath)
@@ -306,7 +306,7 @@ POINT GetFirstPotionPosInInventory(INT potionType)
   POINT point;
 
   for (LPUNITANY Item = Me->pInventory->pFirstItem; Item;
-       Item = Item->pItemData->pNextInvItem)
+       Item = (Item->pItemData ? Item->pItemData->pNextInvItem : nullptr))
   {
     if (Item && Item->pItemData && GetItemLocation(Item) == STORAGE_INVENTORY &&
         Item->pItemPath)

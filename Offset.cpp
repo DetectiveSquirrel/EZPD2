@@ -66,7 +66,7 @@ VOID RemovePatches()
 	for (INT i = 0; i < ArraySize(Patches); i++)
 	{
 		WriteBytes((LPVOID)Patches[i].dwAddr, Patches[i].bOldCode, Patches[i].dwLen);
-		delete Patches[i].bOldCode;
+		delete[] Patches[i].bOldCode;
 	}
 }
 
@@ -86,7 +86,7 @@ VOID FillBytes(LPVOID Address, BYTE Fill, DWORD Length)
 	BYTE *Code = new BYTE[Length];
 	::memset(Code, Fill, Length);
 	WriteBytes(Address, Code, Length);
-	delete Code;
+	delete[] Code;
 }
 
 VOID InterceptLocalCode(BYTE bInst, DWORD pAddr, DWORD pFunc, DWORD dwLen)
@@ -98,7 +98,7 @@ VOID InterceptLocalCode(BYTE bInst, DWORD pAddr, DWORD pFunc, DWORD dwLen)
 	bCode[0] = bInst;
 	*(DWORD *)&bCode[1] = dwFunc;
 	WriteBytes((VOID *)pAddr, bCode, dwLen);
-	delete bCode;
+	delete[] bCode;
 }
 
 VOID PatchCall(DWORD dwAddr, DWORD dwFunc, DWORD dwLen)
@@ -121,5 +121,5 @@ VOID PatchBytes(DWORD dwAddr, DWORD dwValue, DWORD dwLen)
 	BYTE *bCode = new BYTE[dwLen];
 	::memset(bCode, (BYTE)dwValue, dwLen);
 	WriteBytes((LPVOID)dwAddr, bCode, dwLen);
-	delete bCode;
+	delete[] bCode;
 }
