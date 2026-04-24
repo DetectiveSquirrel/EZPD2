@@ -73,13 +73,17 @@
     <ClInclude Include="Handlers.h" />
     <ClInclude Include="Helpers.h" />
     <ClInclude Include="Matrix.h" />
+    <ClInclude Include="MartialArtsCharges.h" />
+    <ClInclude Include="MartialArtsAutomate.h" />
     <ClInclude Include="Offset.h" />
     <ClInclude Include="Patch.h" />
     <ClInclude Include="PatchStubs.h" />
     <ClInclude Include="Pickit.h" />
+    <ClInclude Include="PortalOwnerLabels.h" />
     <ClInclude Include="Reveal.h" />
     <ClInclude Include="Settings.h" />
     <ClInclude Include="SyncObj.h" />
+    <ClInclude Include="TradeInviteReply.h" />
     <ClInclude Include="Vars.h" />
     <ClInclude Include="Vendor.h" />
   </ItemGroup>
@@ -92,11 +96,15 @@
     <ClCompile Include="Handlers.cpp" />
     <ClCompile Include="Helpers.cpp" />
     <ClCompile Include="Menu.cpp" />
+    <ClCompile Include="MartialArtsCharges.cpp" />
+    <ClCompile Include="MartialArtsAutomate.cpp" />
     <ClCompile Include="Offset.cpp" />
     <ClCompile Include="PatchStubs.cpp" />
     <ClCompile Include="Pickit.cpp" />
+    <ClCompile Include="PortalOwnerLabels.cpp" />
     <ClCompile Include="Reveal.cpp" />
     <ClCompile Include="Settings.cpp" />
+    <ClCompile Include="TradeInviteReply.cpp" />
     <ClCompile Include="Vendor.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

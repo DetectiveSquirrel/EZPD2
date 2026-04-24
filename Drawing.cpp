@@ -13,11 +13,11 @@ VOID DrawTextB(INT X, INT Y, DWORD Color, INT Font, INT Center, LPSTR Text, ...)
 	CHAR szBuffer[800] = "";
 	va_list Args;
 	va_start(Args, Text);
-	vsprintf_s(szBuffer, Text, Args);
+	vsprintf_s(szBuffer, sizeof(szBuffer), Text, Args);
 	va_end(Args);
 
 	WCHAR wBuffer[0x130];
-	MultiByteToWideChar(0, 1, szBuffer, 100, wBuffer, 100);
+	MultiByteToWideChar(0, 1, szBuffer, -1, wBuffer, 0x130);
 
 	dwOldSize = D2WIN_SetTextSize(Font);
 
@@ -61,7 +61,7 @@ VOID DrawCheckBox(INT X, INT Y, INT Size, INT FontSize, BOOL Checked, DWORD BoxC
 	CHAR szBuffer[800] = "";
 	va_list Args;
 	va_start(Args, Text);
-	vsprintf_s(szBuffer, Text, Args);
+	vsprintf_s(szBuffer, sizeof(szBuffer), Text, Args);
 	va_end(Args);
 
 	DrawTextB(X + Size * 1.5, Y + Size, TextColor, FontSize, -1, szBuffer);

@@ -652,6 +652,12 @@ enum
 #define UNIT_TYPE_ITEM 4
 #define UNIT_TYPE_TILE 5
 
+// objects.txt ids (vanilla layout; PD2 typically keeps Town Portal at 59).
+#define OBJ_TXT_TOWN_PORTAL 59
+#define OBJ_TXT_RED_PORTAL 60
+// Act 1 red portal beside Akara / Charsi while their shop UI is open (objects.txt row differs from A5-style 60).
+#define OBJ_TXT_RED_PORTAL_ACT1_VENDOR 584
+
 ///////////////////////////////////////////////////
 // Player Mode Definition
 ///////////////////////////////////////////////////
@@ -1251,6 +1257,8 @@ enum
 // PVP Maps
 ///////////////////////////////////////////////////
 #define MAP_PVP_MOOR_ARENA 0x9F
+// PD2: player red portal from A1 camp (e.g. by Akara) — `dwLevelNo` destination (not Blood Moor).
+#define MAP_PD2_A1_RED_PORTAL_OUT_157 0x9D
 #define MAP_PVP_DESERT_ARENA  // IDK, crashes
 
 

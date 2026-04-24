@@ -1,3 +1,5 @@
+#pragma once
+
 VOID DrawMouseCoordinates();
 VOID DrawClosestMonsterStats();
 VOID DrawPlayerInventoryItems();

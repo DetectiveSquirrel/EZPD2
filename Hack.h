@@ -1,3 +1,5 @@
+#pragma once
+
 #define WIN32_LEAN_AND_MEAN
 #define _CRT_SECURE_NO_DEPRECATE
 #define _WIN32_WINNT 0x600
@@ -56,10 +58,14 @@
 #include "Helpers.h"
 #include "Matrix.h"
 #include "Menu.h"
+#include "MartialArtsCharges.h"
+#include "MartialArtsAutomate.h"
 #include "Offset.h"
 #include "PatchStubs.h"
 #include "Pickit.h"
+#include "PortalOwnerLabels.h"
 #include "Reveal.h"
 #include "Settings.h"
+#include "TradeInviteReply.h"
 #include "Vars.h"
 #include "Vendor.h"

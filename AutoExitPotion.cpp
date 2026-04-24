@@ -75,7 +75,8 @@ VOID AutoPotExitMain()
       }
     }
 
-    if (pMerc && (V_TickCount % 80 == 0))
+    static DWORD lastMercPotCheck = 0;
+    if (pMerc && Elapsed(lastMercPotCheck, 500))
     {
       DWORD mercLifePct = GetUnitLifePercent(pMerc);
       if (mercLifePct == -1 || mercLifePct == 0)
@@ -166,7 +167,8 @@ VOID RefillPotions()
       return;
     }
 
-    if (V_TickCount % 40 == 0)
+    static DWORD lastRefillClick = 0;
+    if (Elapsed(lastRefillClick, 300))
     {
       POINT screenPos = GetInventorySlotPixelCoordinates(
           V_ItemSlotLocationToFill.x, V_ItemSlotLocationToFill.y);
@@ -224,7 +226,7 @@ VOID SetEmptyBeltSlotVars()
   DWORD column4Count = 0;
 
   for (LPUNITANY Item = Me->pInventory->pFirstItem; Item;
-       Item = Item->pItemData->pNextInvItem)
+       Item = (Item->pItemData ? Item->pItemData->pNextInvItem : nullptr))
   {
     if (Item && Item->pItemData && GetItemLocation(Item) == STORAGE_BELT &&
         Item->pItemPath)
@@ -255,7 +257,7 @@ VOID SetEmptyBeltSlotVars()
 INT GetHotkeySlotForPotionType(INT potionType)
 {
   for (LPUNITANY Item = Me->pInventory->pFirstItem; Item;
-       Item = Item->pItemData->pNextInvItem)
+       Item = (Item->pItemData ? Item->pItemData->pNextInvItem : nullptr))
   {
     if (Item && Item->pItemData && GetItemLocation(Item) == STORAGE_BELT &&
         Item->pItemPath)
@@ -306,7 +308,7 @@ POINT GetFirstPotionPosInInventory(INT potionType)
   POINT point;
 
   for (LPUNITANY Item = Me->pInventory->pFirstItem; Item;
-       Item = Item->pItemData->pNextInvItem)
+       Item = (Item->pItemData ? Item->pItemData->pNextInvItem : nullptr))
   {
     if (Item && Item->pItemData && GetItemLocation(Item) == STORAGE_INVENTORY &&
         Item->pItemPath)

@@ -1,3 +1,5 @@
+#pragma once
+
 #define POTION_TYPE_NONE 0
 #define POTION_TYPE_REJUV 1
 #define POTION_TYPE_LIFE 2

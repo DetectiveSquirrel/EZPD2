@@ -1,3 +1,5 @@
+#pragma once
+
 #define ArraySize(X) (sizeof(X) / sizeof(X[0]))
 #define KeyDown(Code) ((GetAsyncKeyState(Code) & 0x8000) ? TRUE : FALSE)
 #define VALIDPTR(x) ((x) && (!IsBadReadPtr(x, sizeof(x))))
@@ -27,12 +29,25 @@ BOOL GetItemCodeFromItem(UnitAny* pItem, LPSTR szBuffer, DWORD dwMax);
 VOID SimulateKeyPress(INT vKey);
 VOID SimulateKeyDown(INT vKey);
 VOID SimulateKeyUp(INT vKey);
+VOID SimulateUnicodeChar(WCHAR ch);
 LPCSTR GetPotionTypeName(INT potionType);
 INT SetValidPotionForRefillSlot(INT potionType);
 POINT GetInventorySlotPixelCoordinates(INT x, INT y);
+POINT GetVendorTabPixelCoordinates(INT tabIndex);
+POINT GetVendorSlotPixelCoordinates(INT x, INT y);
+VOID SimulateLeftDown(POINT point);
+VOID SimulateLeftUp(POINT point);
 VOID SimulateLeftClick(POINT point);
+VOID SimulateRightDown(POINT point);
+VOID SimulateRightUp(POINT point);
+VOID SimulateRightClick(POINT point);
 BOOL IsPotionToFillInInventory();
-VOID IncreaseTickCount();
+inline BOOL Elapsed(DWORD &last, DWORD ms)
+{
+    if (GetTickCount() - last < ms) return FALSE;
+    last = GetTickCount();
+    return TRUE;
+}
 DWORD GetTextWidth(LPSTR text, INT font);
 BOOL RectsOverlap(const RECT& r1, const RECT& r2);
 BOOL IsMercClassId(DWORD dwClassID);

@@ -1,3 +1,5 @@
+#pragma once
+
 #ifdef VARS
 
 #define ARRAY(Type, Name) CArrayEx<Type, Type> V_##Name;
@@ -25,6 +27,11 @@ enum InputModeType
 	MODE_REFILL_POTIONS_KEY,
 	MODE_PICKIT_KEY,
 	MODE_ANYA_BOT_KEY,
+	MODE_TRADE_INVITE_REPLY_KEY,
+	MODE_BUILD_MA_CHARGES_KEY,
+	MODE_MA_AUTOMATE_KEY,
+	MODE_MARTIAL_ART_SKILL_BUTTON,
+	MODE_FINISHER_SKILL_BUTTON,
 };
 
 VAR(HINSTANCE, DLL)
@@ -35,7 +42,6 @@ VAR(BOOL, Initialized)
 VAR(BOOL, IsHotkeyInputMode)
 VAR(INT, InputModeType)
 VAR(BOOL, MainMenuOpen)
-VAR(INT, TickCount)
 
 
 // Settings
@@ -45,10 +51,14 @@ VAR(INT, MainMenuKey)
 VAR(INT, RefillPotionsKey)
 VAR(INT, PickitKey)
 VAR(INT, AnyaBotKey)
+VAR(INT, TradeInviteReplyKey)
+VAR(INT, BuildMAChargesKey)
+VAR(INT, MAAutomateKey)
 // Maphack / Drawing
 VAR(BOOL, MapHackEnabled)
 VAR(BOOL, ShowZoneTransitions)
 VAR(BOOL, ShowPreloads)
+VAR(BOOL, TownPortalOwnerLabelsEnabled)
 
 VAR(BOOL, NearbyEntitiesEnabled)
 VAR(BOOL, DrawChampBossMonsters)
@@ -99,7 +109,13 @@ VAR(BOOL, IsPickingUpItems)
 // Misc
 VAR(BOOL, VendorPreviewEnabled)
 VAR(BOOL, VendorShortcutEnabled)
+VAR(BOOL, AnyaAutoPurchaseEnabled)
+VAR(BOOL, TradeInviteReplyEnabled)
+VAR(BOOL, MartialArtsChargesEnabled)
+VAR(BOOL, BuildMAChargesEnabled)
+VAR(BOOL, MAAutomateEnabled)
+VAR(INT, MartialArtSkillButton)
+VAR(INT, FinisherSkillButton)
 
 // Anya Bot, not for Settings
 VAR(BOOL, AnyaBotRunning)
-VAR(BOOL, AnyaBotCheckedItems)

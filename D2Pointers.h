@@ -1,3 +1,5 @@
+#pragma once
+
 #include "ArrayEx.h"
 #include "D2Structs.h"
 
