@@ -20,9 +20,12 @@ VOID Reveal::RevealAutomap()
 	if (!CurrentLevel)
 		return;
 
+		// exclude 3 rathma zones and both pvp areas
 	if (CurrentLevel->dwLevelNo == 161 ||
 		CurrentLevel->dwLevelNo == 162 ||
-		CurrentLevel->dwLevelNo == 163)
+		CurrentLevel->dwLevelNo == 163 ||
+		CurrentLevel->dwLevelNo == 157||
+		CurrentLevel->dwLevelNo == 159)
 		return;
 
 	if (!Me || !Me->pPath || !Me->pPath->pRoom1)
@@ -201,7 +204,7 @@ VOID Reveal::RevealRoom1(LPROOM2 pRoom)
 					}
 				}
 			}
-			else
+			else if (CurrentLevel->dwLevelNo != 195 && CurrentLevel->dwLevelNo != 196)
 			{
 				for (size_t i = 0; i < sizeof(trackedMapMonsters) / sizeof(trackedMapMonsters[0]); ++i)
 				{

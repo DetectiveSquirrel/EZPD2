@@ -27,7 +27,8 @@ VOID PickUpItems()
             return;
         }
 
-        if (V_TickCount % 40 != 0)
+        static DWORD lastPickitTick = 0;
+        if (!Elapsed(lastPickitTick, 300))
             return;
 
         // Get closest item

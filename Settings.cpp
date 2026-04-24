@@ -24,9 +24,12 @@ Setting g_settings[] = {
     {"MainMenuKey", &V_MainMenuKey, SETTING_INT, VK_F7},
     {"RefillPotionsKey", &V_RefillPotionsKey, SETTING_INT, 0},
     {"PickitKey", &V_PickitKey, SETTING_INT, 0},
+    {"BuildMAChargesKey", &V_BuildMAChargesKey, SETTING_INT, 0},
+    {"MAAutomateKey", &V_MAAutomateKey, SETTING_INT, 0},
     {"MapHackEnabled", &V_MapHackEnabled, SETTING_BOOL, TRUE},
     {"ShowZoneTransitions", &V_ShowZoneTransitions, SETTING_BOOL, TRUE},
     {"ShowPreloads", &V_ShowPreloads, SETTING_BOOL, TRUE},
+    {"TownPortalOwnerLabelsEnabled", &V_TownPortalOwnerLabelsEnabled, SETTING_BOOL, TRUE},
     {"NearbyEntitiesEnabled", &V_NearbyEntitiesEnabled, SETTING_BOOL, TRUE},
     {"DrawChampBossMonsters", &V_DrawChampBossMonsters, SETTING_BOOL, TRUE},
     {"DrawNormalMonsters", &V_DrawNormalMonsters, SETTING_BOOL, TRUE},
@@ -54,7 +57,15 @@ Setting g_settings[] = {
     {"PickitEnabled", &V_PickitEnabled, SETTING_BOOL, FALSE},
     {"VendorPreviewEnabled", &V_VendorPreviewEnabled, SETTING_BOOL, FALSE},
     {"VendorShortcutEnabled", &V_VendorShortcutEnabled, SETTING_BOOL, FALSE},
+    {"AnyaAutoPurchaseEnabled", &V_AnyaAutoPurchaseEnabled, SETTING_BOOL, TRUE},
     {"AnyaBotKey", &V_AnyaBotKey, SETTING_INT, 0},
+    {"TradeInviteReplyEnabled", &V_TradeInviteReplyEnabled, SETTING_BOOL, FALSE},
+    {"TradeInviteReplyKey", &V_TradeInviteReplyKey, SETTING_INT, 0},
+    {"MartialArtsChargesEnabled", &V_MartialArtsChargesEnabled, SETTING_BOOL, TRUE},
+    {"BuildMAChargesEnabled", &V_BuildMAChargesEnabled, SETTING_BOOL, FALSE},
+    {"MAAutomateEnabled", &V_MAAutomateEnabled, SETTING_BOOL, FALSE},
+    {"MartialArtSkillButton", &V_MartialArtSkillButton, SETTING_INT, VK_RBUTTON},
+    {"FinisherSkillButton", &V_FinisherSkillButton, SETTING_INT, VK_LBUTTON},
 };
 
 const int g_numSettings = sizeof(g_settings) / sizeof(g_settings[0]);

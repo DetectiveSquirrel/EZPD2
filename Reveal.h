@@ -37,53 +37,78 @@ typedef struct UnitClassIdMapping
 } UnitClassIdMapping, *LPUnitClassIdMapping;
 
 const UnitClassIdMapping trackedMapMonsters[] = {
-	{738, "Boss"}, // Lesser Hydra that might be used to spawn bosses in-game
+	// Previous list (kept for easy revert)
+	// {738, "Boss"}, // Lesser Hydra that might be used to spawn bosses in-game
 	// {739, "Boss"}, // Lesser Hydra that might be used to spawn bosses in-game
-	{740, "Boss"}, // Lesser Hydra that might be used to spawn bosses in-game
-	{883, "Boss"}, // Battlefield Map
-	{893, "Boss"}, // Fall of Calldeum
-	{915, "Boss"}, // Lost Temple
-	{998, "Boss"}, // Royal Crypts
-	{800, "Boss"}, // Horazon's Memory
-	{884, "Boss"}, // Sewers of Harogath
-	{879, "Boss"}, // Torajan Jungle
-	{996, "Boss"}, // Shadow of Westmarch
-	{861, "Boss"}, // Ancestral Trial
-	{750, "Boss"}, // Ruins of Viz-Jun
-	{870, "Boss"}, // Tomb of Zoltun Kulle
-	{826, "Boss"}, // Blood Moon
-	{1121, "Boss"}, // Durance of Strife
-	{964, "Boss"}, // Kehjistan Marketplace
+	// {740, "Boss"}, // Lesser Hydra that might be used to spawn bosses in-game
+	// {883, "Boss"}, // Battlefield Map
+	// {893, "Boss"}, // Fall of Calldeum
+	// {915, "Boss"}, // Lost Temple
+	// {998, "Boss"}, // Royal Crypts
+	// {800, "Boss"}, // Horazon's Memory
+	// {884, "Boss"}, // Sewers of Harogath
+	// {879, "Boss"}, // Torajan Jungle
+	// {996, "Boss"}, // Shadow of Westmarch
+	// {861, "Boss"}, // Ancestral Trial
+	// {750, "Boss"}, // Ruins of Viz-Jun
+	// {870, "Boss"}, // Tomb of Zoltun Kulle
+	// {826, "Boss"}, // Blood Moon
+	// {1121, "Boss"}, // Durance of Strife
+	// {964, "Boss"}, // Kehjistan Marketplace
+	// {746, "Boss"}, // Phlegeton
+	// {1025, "Boss"}, // Ashen Plains
+	// {963, "Boss"}, // Canyon of Sescheron
+	// {894, "Boss"}, // Pandemonium Citadel
+	// {1026, "Boss"}, // Ruined Cistern
+	// {1044, "Boss"}, // Ruined Cistern
+	// {997, "Boss"}, // Sanatorium
+	// {991, "Boss"}, // Shadow of the Worldstone
+	// {882, "Boss"}, // Throne of Insanity
+	// {1104, "Boss"}, // Sanctuary of Sin Dungeon
+	// {743, "Boss"}, // Plains of Torment Dungeon
+	// {1105, "Boss"}, // Steppes of Daken-Shar Dungeon
+	// {1060, "Boss"}, // Stronghold of Acheron (Warlord of Blood unique map)
+	// {1092, "Boss"}, // Stygian Caverns (Warlord of Night unique map)
+	// {1093, "Boss"}, // Stronghold of Acheron (Warlord of Blood unique map)
+	// {1096, "Boss"}, // Fallen Gardens (unique map)
+	// {1063, "Boss"}, // Collonades of Madness (zhar's sanctum unique map)
+	// {1062, "Boss"}, // Hidden Waterways (zhar's sanctum unique map)
+	// {1061, "Boss"}, // Counselor's Causeway (zhar's sanctum unique map)
+
+	{738, "Boss"}, // Halls of Torture, Sanatorium, Royal Crypts, Blood Moon, River of Blood Belial, Zhar's Sanctum
+	{739, "Boss"}, // River of Blood Avunaos
 	{746, "Boss"}, // Phlegeton
-	{1025, "Boss"}, // Ashen Plains
-	{963, "Boss"}, // Canyon of Sescheron
-	{894, "Boss"}, // Pandemonium Citadel
-	{1026, "Boss"}, // Ruined Cistern
-	{1044, "Boss"}, // Ruined Cistern
-	{997, "Boss"}, // Sanatorium
-	{991, "Boss"}, // Shadow of the Worldstone
+	{750, "Boss"}, // Ruins of Viz Jun
+	{800, "Boss"}, // Horazon's Memory
+	{809, "Boss"}, // Bastion Keep
+	{861, "Boss"}, // Ancestral Trial
+	{870, "Boss"}, // Tomb of Zoltun Kulle
+	{879, "Boss"}, // Torajan Jungle
 	{882, "Boss"}, // Throne of Insanity
-	{1104, "Boss"}, // Sanctuary of Sin Dungeon
-	{743, "Boss"}, // Plains of Torment Dungeon
-	{1105, "Boss"}, // Steppes of Daken-Shar Dungeon
-	{1060, "Boss"}, // Stronghold of Acheron (Warlord of Blood unique map)
-	{1092, "Boss"}, // Stygian Caverns (Warlord of Night unique map)
-	{1093, "Boss"}, // Stronghold of Acheron (Warlord of Blood unique map)
-	{1096, "Boss"}, // Fallen Gardens (unique map)
-	{1063, "Boss"}, // Collonades of Madness (zhar's sanctum unique map)
-	{1062, "Boss"}, // Hidden Waterways (zhar's sanctum unique map)
-	{1061, "Boss"}, // Counselor's Causeway (zhar's sanctum unique map)
+	{883, "Boss"}, // Arreat Battlefield
+	{884, "Boss"}, // Sewers of Harrogath
+	{893, "Boss"}, // Fall of Caldeum
+	{894, "Boss"}, // Pandemonium Citadel
+	{915, "Boss"}, // Lost Temple
+	{963, "Boss"}, // Canyon of Secheron
+	{964, "Boss"}, // Kehjistan Marketplace
+	{996, "Boss"}, // Westmarch
+	{1025, "Boss"}, // Ashen Plains
+	{1026, "Boss"}, // Ruined Cistern
+	{1121, "Boss"}, // Demon Road
+	{1122, "Boss"}, // Skovos Stronghold
 };
 
 const UnitClassIdMapping trackedCampaignMonsters[] = {
-	{1243, "Blood Raven"},
-	{1177, "The Countess"},
+	{1263, "Blood Raven"},
+	{1197, "The Countess"},
 	{156, "Andariel"},
 	{250, "Summoner"},
 	{242, "Mephisto"},
 	{256, "Izual"},
-	{1230, "Anya"},	 // Monster next to Anya
+	{1250, "Anya"},	 // Monster next to Anya
 	{543, "Throne"}, // Baal that spawns during waves
+	{1233, "Shenk"},
 };
 
 const UnitClassIdMapping trackedCampaignObjects[] = {
@@ -108,6 +133,7 @@ const UnitClassIdMapping trackedCampaignObjects[] = {
 	{396, "Seal"},				// Seal left
 	{473, "Prison"},			// 3 Prisons in A5
 	{462, "Nihlathak"},			// Tile that Nihlathak is on
+	{593, "Spire of Darkness"},	
 
 	{60, "Red Portal"}, // Red Portals in A5
 

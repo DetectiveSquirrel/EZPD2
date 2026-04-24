@@ -822,6 +822,16 @@ LPCSTR GetKeyName(int vkCode)
 		return "Down";
 	case VK_SPACE:
 		return "Space";
+	case VK_LBUTTON:
+		return "Mouse Left";
+	case VK_RBUTTON:
+		return "Mouse Right";
+	case VK_MBUTTON:
+		return "Mouse Middle";
+	case VK_XBUTTON1:
+		return "Mouse Back";
+	case VK_XBUTTON2:
+		return "Mouse Forward";
 	case VK_BROWSER_BACK:
 		return "Browser Back";
 	case VK_BROWSER_FORWARD:
@@ -966,6 +976,26 @@ VOID SimulateKeyPress(INT vKey)
 	SendInput(2, input, sizeof(INPUT));
 }
 
+VOID SimulateUnicodeChar(WCHAR ch)
+{
+	if (ch == 0)
+		return;
+
+	INPUT input[2] = {0};
+
+	input[0].type = INPUT_KEYBOARD;
+	input[0].ki.wVk = 0;
+	input[0].ki.wScan = ch;
+	input[0].ki.dwFlags = KEYEVENTF_UNICODE;
+
+	input[1].type = INPUT_KEYBOARD;
+	input[1].ki.wVk = 0;
+	input[1].ki.wScan = ch;
+	input[1].ki.dwFlags = KEYEVENTF_UNICODE | KEYEVENTF_KEYUP;
+
+	SendInput(2, input, sizeof(INPUT));
+}
+
 VOID SimulateKeyDown(INT vKey)
 {
 	// Simulate key down
@@ -1027,6 +1057,67 @@ POINT GetInventorySlotPixelCoordinates(INT x, INT y)
 	return point;
 }
 
+POINT GetVendorTabPixelCoordinates(INT tabIndex)
+{
+	const INT left = 214;
+	const INT right = 532;
+	const INT top = 64;
+	const INT bottom = 90;
+	const INT tabCount = 4;
+
+	if (tabIndex < 0)
+		tabIndex = 0;
+	else if (tabIndex >= tabCount)
+		tabIndex = tabCount - 1;
+
+	POINT point;
+	point.x = left + (((tabIndex * 2 + 1) * (right - left)) / (tabCount * 2));
+	point.y = top + ((bottom - top) / 2);
+	return point;
+}
+
+POINT GetVendorSlotPixelCoordinates(INT x, INT y)
+{
+	const INT left = 230;
+	const INT right = 518;
+	const INT top = 104;
+	const INT bottom = 392;
+	const INT gridWidth = 10;
+	const INT gridHeight = 10;
+
+	if (x < 0)
+		x = 0;
+	else if (x >= gridWidth)
+		x = gridWidth - 1;
+
+	if (y < 0)
+		y = 0;
+	else if (y >= gridHeight)
+		y = gridHeight - 1;
+
+	POINT point;
+	point.x = left + (((x * 2 + 1) * (right - left)) / (gridWidth * 2));
+	point.y = top + (((y * 2 + 1) * (bottom - top)) / (gridHeight * 2));
+	return point;
+}
+
+VOID SimulateLeftDown(POINT point)
+{
+	SetCursorPos(point.x, point.y);
+	INPUT input = {0};
+	input.type       = INPUT_MOUSE;
+	input.mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+	SendInput(1, &input, sizeof(INPUT));
+}
+
+VOID SimulateLeftUp(POINT point)
+{
+	INPUT input = {0};
+	input.type       = INPUT_MOUSE;
+	input.mi.dwFlags = MOUSEEVENTF_LEFTUP;
+	SendInput(1, &input, sizeof(INPUT));
+}
+
 VOID SimulateLeftClick(POINT point)
 {
 	SetCursorPos(point.x, point.y);
@@ -1049,6 +1140,41 @@ VOID SimulateLeftClick(POINT point)
 	SendInput(2, input, sizeof(INPUT));
 }
 
+VOID SimulateRightDown(POINT point)
+{
+	SetCursorPos(point.x, point.y);
+	INPUT input = {0};
+	input.type = INPUT_MOUSE;
+	input.mi.dwFlags = MOUSEEVENTF_RIGHTDOWN;
+	SendInput(1, &input, sizeof(INPUT));
+}
+
+VOID SimulateRightUp(POINT point)
+{
+	INPUT input = {0};
+	input.type = INPUT_MOUSE;
+	input.mi.dwFlags = MOUSEEVENTF_RIGHTUP;
+	SendInput(1, &input, sizeof(INPUT));
+}
+
+VOID SimulateRightClick(POINT point)
+{
+	SetCursorPos(point.x, point.y);
+	INPUT input[2] = {0};
+
+	input[0].type = INPUT_MOUSE;
+	input[0].mi.dwFlags = MOUSEEVENTF_RIGHTDOWN;
+	input[0].mi.dx = point.x;
+	input[0].mi.dy = point.y;
+
+	input[1].type = INPUT_MOUSE;
+	input[1].mi.dwFlags = MOUSEEVENTF_RIGHTUP;
+	input[1].mi.dx = point.x;
+	input[1].mi.dy = point.y;
+
+	SendInput(2, input, sizeof(INPUT));
+}
+
 BOOL IsPotionToFillInInventory()
 {
 	for (LPUNITANY Item = Me->pInventory->pFirstItem; Item; Item = Item->pItemData->pNextInvItem)
@@ -1068,14 +1194,6 @@ BOOL IsPotionToFillInInventory()
 	return FALSE;
 }
 
-VOID IncreaseTickCount()
-{
-	V_TickCount++;
-	if (V_TickCount > 80)
-	{
-		V_TickCount = 0;
-	}
-}
 
 DWORD GetTextWidth(LPSTR text, INT font)
 {

@@ -31,6 +31,36 @@ void ToggleAnyaBotKeyInput()
     V_InputModeType = MODE_ANYA_BOT_KEY;
 }
 
+void ToggleTradeInviteReplyKeyInput()
+{
+    V_IsHotkeyInputMode = TRUE;
+    V_InputModeType = MODE_TRADE_INVITE_REPLY_KEY;
+}
+
+void ToggleBuildMAChargesKeyInput()
+{
+    V_IsHotkeyInputMode = TRUE;
+    V_InputModeType = MODE_BUILD_MA_CHARGES_KEY;
+}
+
+void ToggleMAAutomateKeyInput()
+{
+    V_IsHotkeyInputMode = TRUE;
+    V_InputModeType = MODE_MA_AUTOMATE_KEY;
+}
+
+void ToggleMartialArtSkillButtonInput()
+{
+    V_IsHotkeyInputMode = TRUE;
+    V_InputModeType = MODE_MARTIAL_ART_SKILL_BUTTON;
+}
+
+void ToggleFinisherSkillButtonInput()
+{
+    V_IsHotkeyInputMode = TRUE;
+    V_InputModeType = MODE_FINISHER_SKILL_BUTTON;
+}
+
 void InitMenu()
 {
     g_menuColumn1.clear();
@@ -160,6 +190,30 @@ void InitMenu()
     item.label = "Anya Bot";
     item.type = Button;
     item.callback = ToggleAnyaBotKeyInput;
+    item.indent = 1;
+    item.parentIndex = -1;
+    g_menuColumn1.push_back(item);
+
+    item = MenuItem();
+    item.label = "Trade Reply";
+    item.type = Button;
+    item.callback = ToggleTradeInviteReplyKeyInput;
+    item.indent = 1;
+    item.parentIndex = -1;
+    g_menuColumn1.push_back(item);
+
+    item = MenuItem();
+    item.label = "Build MA Charges";
+    item.type = Button;
+    item.callback = ToggleBuildMAChargesKeyInput;
+    item.indent = 1;
+    item.parentIndex = -1;
+    g_menuColumn1.push_back(item);
+
+    item = MenuItem();
+    item.label = "MA Automate";
+    item.type = Button;
+    item.callback = ToggleMAAutomateKeyInput;
     item.indent = 1;
     item.parentIndex = -1;
     g_menuColumn1.push_back(item);
@@ -378,9 +432,87 @@ void InitMenu()
     g_menuColumn3.push_back(item);
 
     item = MenuItem();
+    item.label = "Town Portal Labels";
+    item.type = Checkbox;
+    item.boolValue = &V_TownPortalOwnerLabelsEnabled;
+    item.indent = 1;
+    item.parentIndex = -1;
+    g_menuColumn3.push_back(item);
+
+    item = MenuItem();
     item.label = "Vendor Shortcuts";
     item.type = Checkbox;
     item.boolValue = &V_VendorShortcutEnabled;
+    item.indent = 1;
+    item.parentIndex = -1;
+    g_menuColumn3.push_back(item);
+
+    item = MenuItem();
+    item.label = "Anya Auto Purchase";
+    item.type = Checkbox;
+    item.boolValue = &V_AnyaAutoPurchaseEnabled;
+    item.indent = 1;
+    item.parentIndex = -1;
+    g_menuColumn3.push_back(item);
+
+    item = MenuItem();
+    item.label = "Trade Reply (/r game / pass)";
+    item.type = Checkbox;
+    item.boolValue = &V_TradeInviteReplyEnabled;
+    item.indent = 1;
+    item.parentIndex = -1;
+    g_menuColumn3.push_back(item);
+
+    item = MenuItem();
+    item.label = "Martial Arts Charges";
+    item.type = Checkbox;
+    item.boolValue = &V_MartialArtsChargesEnabled;
+    item.indent = 1;
+    item.parentIndex = -1;
+    g_menuColumn3.push_back(item);
+
+    item = MenuItem();
+    item.label = "Martial Arts Automate";
+    item.type = Label;
+    item.indent = 0;
+    item.parentIndex = -1;
+    g_menuColumn3.push_back(item);
+
+    item = MenuItem();
+    item.label = "Enable Build MA Charges";
+    item.type = Checkbox;
+    item.boolValue = &V_BuildMAChargesEnabled;
+    item.indent = 1;
+    item.parentIndex = -1;
+    g_menuColumn3.push_back(item);
+
+    item = MenuItem();
+    item.label = "Enable MA Automate";
+    item.type = Checkbox;
+    item.boolValue = &V_MAAutomateEnabled;
+    item.indent = 1;
+    item.parentIndex = -1;
+    g_menuColumn3.push_back(item);
+
+    item = MenuItem();
+    item.label = "MA Skill Bindings";
+    item.type = Label;
+    item.indent = 0;
+    item.parentIndex = -1;
+    g_menuColumn3.push_back(item);
+
+    item = MenuItem();
+    item.label = "Martial Art Skill Button";
+    item.type = Button;
+    item.callback = ToggleMartialArtSkillButtonInput;
+    item.indent = 1;
+    item.parentIndex = -1;
+    g_menuColumn3.push_back(item);
+
+    item = MenuItem();
+    item.label = "Finisher Skill Button";
+    item.type = Button;
+    item.callback = ToggleFinisherSkillButtonInput;
     item.indent = 1;
     item.parentIndex = -1;
     g_menuColumn3.push_back(item);
@@ -456,24 +588,56 @@ void DrawMenuColumn(std::vector<MenuItem> &column, int base_x, int &currentY)
             }
             break;
         case Button:
-            DrawTextB(item.x, item.y, FONTCOLOR_WHITE, 6, -1, (LPSTR)item.label);
+        {
+            int textX = item.x;
+            int valueX = item.x + 150;
+
+            // Align these two rows with checkbox text in the same subsection.
+            if (item.callback == ToggleMartialArtSkillButtonInput || item.callback == ToggleFinisherSkillButtonInput)
+            {
+                textX = item.x + 18;
+                valueX = item.x + 168;
+            }
+
+            DrawTextB(textX, item.y, FONTCOLOR_WHITE, 6, -1, (LPSTR)item.label);
             if (item.callback == ToggleMenuKeyInput)
             {
-                DrawTextB(item.x + 150, item.y, V_InputModeType == MODE_MENU_KEY ? FONTCOLOR_BLUE : FONTCOLOR_GOLD, 6, -1, "%s", GetKeyName(V_MainMenuKey));
+                DrawTextB(valueX, item.y, V_InputModeType == MODE_MENU_KEY ? FONTCOLOR_BLUE : FONTCOLOR_GOLD, 6, -1, "%s", GetKeyName(V_MainMenuKey));
             }
             else if (item.callback == ToggleRefillPotionsKeyInput)
             {
-                DrawTextB(item.x + 150, item.y, V_InputModeType == MODE_REFILL_POTIONS_KEY ? FONTCOLOR_BLUE : FONTCOLOR_GOLD, 6, -1, "%s", GetKeyName(V_RefillPotionsKey));
+                DrawTextB(valueX, item.y, V_InputModeType == MODE_REFILL_POTIONS_KEY ? FONTCOLOR_BLUE : FONTCOLOR_GOLD, 6, -1, "%s", GetKeyName(V_RefillPotionsKey));
             }
             else if (item.callback == TogglePickitKeyInput)
             {
-                DrawTextB(item.x + 150, item.y, V_InputModeType == MODE_PICKIT_KEY ? FONTCOLOR_BLUE : FONTCOLOR_GOLD, 6, -1, "%s", GetKeyName(V_PickitKey));
+                DrawTextB(valueX, item.y, V_InputModeType == MODE_PICKIT_KEY ? FONTCOLOR_BLUE : FONTCOLOR_GOLD, 6, -1, "%s", GetKeyName(V_PickitKey));
             }
             else if (item.callback == ToggleAnyaBotKeyInput)
             {
-                DrawTextB(item.x + 150, item.y, V_InputModeType == MODE_ANYA_BOT_KEY ? FONTCOLOR_BLUE : FONTCOLOR_GOLD, 6, -1, "%s", GetKeyName(V_AnyaBotKey));
+                DrawTextB(valueX, item.y, V_InputModeType == MODE_ANYA_BOT_KEY ? FONTCOLOR_BLUE : FONTCOLOR_GOLD, 6, -1, "%s", GetKeyName(V_AnyaBotKey));
+            }
+            else if (item.callback == ToggleTradeInviteReplyKeyInput)
+            {
+                DrawTextB(valueX, item.y, V_InputModeType == MODE_TRADE_INVITE_REPLY_KEY ? FONTCOLOR_BLUE : FONTCOLOR_GOLD, 6, -1, "%s", GetKeyName(V_TradeInviteReplyKey));
+            }
+            else if (item.callback == ToggleBuildMAChargesKeyInput)
+            {
+                DrawTextB(valueX, item.y, V_InputModeType == MODE_BUILD_MA_CHARGES_KEY ? FONTCOLOR_BLUE : FONTCOLOR_GOLD, 6, -1, "%s", GetKeyName(V_BuildMAChargesKey));
+            }
+            else if (item.callback == ToggleMAAutomateKeyInput)
+            {
+                DrawTextB(valueX, item.y, V_InputModeType == MODE_MA_AUTOMATE_KEY ? FONTCOLOR_BLUE : FONTCOLOR_GOLD, 6, -1, "%s", GetKeyName(V_MAAutomateKey));
+            }
+            else if (item.callback == ToggleMartialArtSkillButtonInput)
+            {
+                DrawTextB(valueX, item.y, V_InputModeType == MODE_MARTIAL_ART_SKILL_BUTTON ? FONTCOLOR_BLUE : FONTCOLOR_GOLD, 6, -1, "%s", GetKeyName(V_MartialArtSkillButton));
+            }
+            else if (item.callback == ToggleFinisherSkillButtonInput)
+            {
+                DrawTextB(valueX, item.y, V_InputModeType == MODE_FINISHER_SKILL_BUTTON ? FONTCOLOR_BLUE : FONTCOLOR_GOLD, 6, -1, "%s", GetKeyName(V_FinisherSkillButton));
             }
             break;
+        }
         case Label:
             DrawTextB(item.x, item.y, FONTCOLOR_GOLD, 8, -1, (LPSTR)item.label);
             break;
