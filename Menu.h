@@ -33,4 +33,5 @@ struct MenuItem {
 
 void InitMenu();
 void DrawMenu();
-void HandleMenuClick(int mouseX, int mouseY);
+bool HandleMenuClick(int mouseX, int mouseY);
+void HandleMenuScroll(int delta);

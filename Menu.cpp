@@ -5,6 +5,40 @@
 std::vector<MenuItem> g_menuColumn1;
 std::vector<MenuItem> g_menuColumn2;
 std::vector<MenuItem> g_menuColumn3;
+std::vector<MenuItem> g_menuMap;
+std::vector<MenuItem> g_menuMonsters;
+std::vector<MenuItem> g_menuDebug;
+std::vector<MenuItem> g_menuAutomation;
+std::vector<MenuItem> g_menuHotkeys;
+
+enum MenuTab
+{
+    MENU_TAB_MAP,
+    MENU_TAB_MONSTERS,
+    MENU_TAB_DEBUG,
+    MENU_TAB_AUTOMATION,
+    MENU_TAB_HOTKEYS,
+    MENU_TAB_COUNT
+};
+
+static int g_selectedMenuTab = MENU_TAB_MAP;
+static int g_menuScrollOffsets[MENU_TAB_COUNT] = {0};
+static const char *g_menuTabNames[MENU_TAB_COUNT] = {"Map", "Monsters", "Debug", "Automation", "Hotkeys"};
+
+static const int MENU_VIEW_TOP = 90;
+static const int MENU_VIEW_BOTTOM = 570;
+static const int MENU_WIDTH = 535;
+static const int MENU_HEIGHT = 580;
+
+static int GetMenuLeft()
+{
+    return max(0, ((INT)*p_D2CLIENT_ScreenSizeX - MENU_WIDTH) / 2);
+}
+
+static int GetMenuTop()
+{
+    return max(0, ((INT)*p_D2CLIENT_ScreenSizeY - MENU_HEIGHT) / 2);
+}
 
 // Forward declarations for callback functions
 void ToggleMenuKeyInput()
@@ -99,6 +133,71 @@ void AddMonsterMarkerMenuItems(std::vector<MenuItem> &column)
     item.indent = 1;
     item.parentIndex = -1;
     column.push_back(item);
+}
+
+void AddMenuRange(std::vector<MenuItem> &dest, std::vector<MenuItem> &source, size_t start, size_t end)
+{
+    if (end > source.size())
+        end = source.size();
+
+    for (size_t i = start; i < end; ++i)
+    {
+        dest.push_back(source[i]);
+    }
+}
+
+void AddMenuItemByLabel(std::vector<MenuItem> &dest, std::vector<MenuItem> &source, const char *label)
+{
+    for (size_t i = 0; i < source.size(); ++i)
+    {
+        if (source[i].label && strcmp(source[i].label, label) == 0)
+        {
+            dest.push_back(source[i]);
+            return;
+        }
+    }
+}
+
+void BuildMenuTabs()
+{
+    g_menuMap.clear();
+    g_menuMonsters.clear();
+    g_menuDebug.clear();
+    g_menuAutomation.clear();
+    g_menuHotkeys.clear();
+
+    AddMenuRange(g_menuMap, g_menuColumn1, 0, 5);
+    AddMenuItemByLabel(g_menuMap, g_menuColumn3, "Town Portal Labels");
+
+    AddMenuRange(g_menuMonsters, g_menuColumn1, 5, 11);
+    AddMenuItemByLabel(g_menuMonsters, g_menuColumn3, "Monster Icons");
+    AddMenuItemByLabel(g_menuMonsters, g_menuColumn3, "All Monster Style");
+    AddMenuItemByLabel(g_menuMonsters, g_menuColumn3, "All Monster Font ID");
+    AddMenuItemByLabel(g_menuMonsters, g_menuColumn3, "Monster HP Percent");
+    AddMenuItemByLabel(g_menuMonsters, g_menuColumn3, "Monster Class IDs");
+
+    AddMenuItemByLabel(g_menuDebug, g_menuColumn3, "Debug Drawing");
+    AddMenuItemByLabel(g_menuDebug, g_menuColumn3, "Mouse / Player Coords");
+    AddMenuItemByLabel(g_menuDebug, g_menuColumn3, "Nearest Item");
+    AddMenuItemByLabel(g_menuDebug, g_menuColumn3, "Player Inventory");
+    AddMenuItemByLabel(g_menuDebug, g_menuColumn3, "Player Belt");
+    AddMenuItemByLabel(g_menuDebug, g_menuColumn3, "Closest Monster Stats");
+    AddMenuItemByLabel(g_menuDebug, g_menuColumn3, "Current Room Info");
+
+    AddMenuRange(g_menuAutomation, g_menuColumn2, 0, g_menuColumn2.size());
+    AddMenuItemByLabel(g_menuAutomation, g_menuColumn3, "Vendor Preview");
+    AddMenuItemByLabel(g_menuAutomation, g_menuColumn3, "Vendor Shortcuts");
+    AddMenuItemByLabel(g_menuAutomation, g_menuColumn3, "Anya Auto Purchase");
+    AddMenuItemByLabel(g_menuAutomation, g_menuColumn3, "Trade Reply (/r game / pass)");
+    AddMenuItemByLabel(g_menuAutomation, g_menuColumn3, "Martial Arts Charges");
+    AddMenuItemByLabel(g_menuAutomation, g_menuColumn3, "Martial Arts Automate");
+    AddMenuItemByLabel(g_menuAutomation, g_menuColumn3, "Enable Build MA Charges");
+    AddMenuItemByLabel(g_menuAutomation, g_menuColumn3, "Enable MA Automate");
+
+    AddMenuRange(g_menuHotkeys, g_menuColumn1, 11, g_menuColumn1.size());
+    AddMenuItemByLabel(g_menuHotkeys, g_menuColumn3, "MA Skill Bindings");
+    AddMenuItemByLabel(g_menuHotkeys, g_menuColumn3, "Martial Art Skill Button");
+    AddMenuItemByLabel(g_menuHotkeys, g_menuColumn3, "Finisher Skill Button");
 }
 
 void InitMenu()
@@ -519,7 +618,6 @@ void InitMenu()
     item.parentIndex = -1;
     g_menuColumn3.push_back(item);
 
-    item = MenuItem();
     item.label = "Mouse / Player Coords";
     item.type = Checkbox;
     item.boolValue = &V_DebugMouseCoordinates;
@@ -644,9 +742,11 @@ void InitMenu()
     item.indent = 1;
     item.parentIndex = -1;
     g_menuColumn3.push_back(item);
+
+    BuildMenuTabs();
 }
 
-void DrawMenuColumn(std::vector<MenuItem> &column, int base_x, int &currentY)
+void DrawMenuColumn(std::vector<MenuItem> &column, int base_x, int &currentY, int scrollOffset)
 {
     const int itemHeight = 20;
     const int indentWidth = 20;
@@ -679,108 +779,114 @@ void DrawMenuColumn(std::vector<MenuItem> &column, int base_x, int &currentY)
         else
         {
             item.x = base_x + (item.indent * indentWidth);
-            item.y = currentY;
+            item.y = currentY - scrollOffset;
         }
 
-        switch (item.type)
+        int menuTop = GetMenuTop();
+        bool isVisible = item.y >= menuTop + MENU_VIEW_TOP - itemHeight && item.y <= menuTop + MENU_VIEW_BOTTOM;
+
+        if (isVisible)
         {
-        case Category:
-        case Checkbox:
-            item.width = 12;
-            item.height = 12;
-            DrawCheckBox(item.x, item.y, item.width, 6, *item.boolValue, COLOR_WHITE, FONTCOLOR_WHITE, "%s", (LPSTR)item.label);
-            break;
-        case IntSlider:
-            if (IsMonsterMarkerStyleSlider(item))
+            switch (item.type)
             {
-                DrawIncreaseDecrease(item.x, item.y + 5, FALSE, COLOR_WHITE);
-                DrawTextB(item.x + 20, item.y + 15, FONTCOLOR_WHITE, 6, -1, "%s: %s", (LPSTR)item.label, GetMonsterMarkerStyleName(*item.intValue));
-                DrawIncreaseDecrease(item.x + 130, item.y + 5, TRUE, COLOR_WHITE);
-            }
-            else if (IsMonsterMarkerFontSlider(item))
-            {
-                DrawIncreaseDecrease(item.x, item.y + 5, FALSE, COLOR_WHITE);
-                DrawTextB(item.x + 20, item.y + 15, FONTCOLOR_WHITE, 6, -1, "%s: %d", (LPSTR)item.label, *item.intValue);
-                DrawIncreaseDecrease(item.x + 130, item.y + 5, TRUE, COLOR_WHITE);
-            }
-            else if (item.label == "Slot 1" || item.label == "Slot 2" || item.label == "Slot 3" || item.label == "Slot 4")
-            {
-                const int decrease_button_x = item.x + 50;
-                const int potion_name_x = decrease_button_x + 25;
-                const int increase_button_x = potion_name_x + 55;
+            case Category:
+            case Checkbox:
+                item.width = 12;
+                item.height = 12;
+                DrawCheckBox(item.x, item.y, item.width, 6, *item.boolValue, COLOR_WHITE, FONTCOLOR_WHITE, "%s", (LPSTR)item.label);
+                break;
+            case IntSlider:
+                if (IsMonsterMarkerStyleSlider(item))
+                {
+                    DrawIncreaseDecrease(item.x, item.y + 5, FALSE, COLOR_WHITE);
+                    DrawTextB(item.x + 20, item.y + 15, FONTCOLOR_WHITE, 6, -1, "%s: %s", (LPSTR)item.label, GetMonsterMarkerStyleName(*item.intValue));
+                    DrawIncreaseDecrease(item.x + 130, item.y + 5, TRUE, COLOR_WHITE);
+                }
+                else if (IsMonsterMarkerFontSlider(item))
+                {
+                    DrawIncreaseDecrease(item.x, item.y + 5, FALSE, COLOR_WHITE);
+                    DrawTextB(item.x + 20, item.y + 15, FONTCOLOR_WHITE, 6, -1, "%s: %d", (LPSTR)item.label, *item.intValue);
+                    DrawIncreaseDecrease(item.x + 130, item.y + 5, TRUE, COLOR_WHITE);
+                }
+                else if (item.label == "Slot 1" || item.label == "Slot 2" || item.label == "Slot 3" || item.label == "Slot 4")
+                {
+                    const int decrease_button_x = item.x + 50;
+                    const int potion_name_x = decrease_button_x + 25;
+                    const int increase_button_x = potion_name_x + 55;
 
-                DrawTextB(item.x, item.y + 15, FONTCOLOR_WHITE, 6, -1, "%s:", (LPSTR)item.label);
-                DrawIncreaseDecrease(decrease_button_x, item.y + 5, FALSE, COLOR_WHITE);
-                DrawTextB(potion_name_x, item.y + 15, FONTCOLOR_WHITE, 6, -1, "%s", GetPotionTypeName(*(int *)item.intValue));
-                DrawIncreaseDecrease(increase_button_x, item.y + 5, TRUE, COLOR_WHITE);
-            }
-            else if (isThresholdSlider)
+                    DrawTextB(item.x, item.y + 15, FONTCOLOR_WHITE, 6, -1, "%s:", (LPSTR)item.label);
+                    DrawIncreaseDecrease(decrease_button_x, item.y + 5, FALSE, COLOR_WHITE);
+                    DrawTextB(potion_name_x, item.y + 15, FONTCOLOR_WHITE, 6, -1, "%s", GetPotionTypeName(*(int *)item.intValue));
+                    DrawIncreaseDecrease(increase_button_x, item.y + 5, TRUE, COLOR_WHITE);
+                }
+                else if (isThresholdSlider)
+                {
+                    DrawIncreaseDecrease(item.x, item.y, FALSE, COLOR_WHITE);
+                    DrawTextB(item.x + 20, item.y + 10, FONTCOLOR_WHITE, 6, -1, "%d%%", *item.intValue);
+                    DrawIncreaseDecrease(item.x + 50, item.y, TRUE, COLOR_WHITE);
+                }
+                else
+                {
+                    DrawIncreaseDecrease(item.x, item.y + 5, FALSE, COLOR_WHITE);
+                    DrawTextB(item.x + 20, item.y + 15, FONTCOLOR_WHITE, 6, -1, "%s: %d%%", (LPSTR)item.label, *item.intValue);
+                    DrawIncreaseDecrease(item.x + 100, item.y + 5, TRUE, COLOR_WHITE);
+                }
+                break;
+            case Button:
             {
-                DrawIncreaseDecrease(item.x, item.y, FALSE, COLOR_WHITE);
-                DrawTextB(item.x + 20, item.y + 10, FONTCOLOR_WHITE, 6, -1, "%d%%", *item.intValue);
-                DrawIncreaseDecrease(item.x + 50, item.y, TRUE, COLOR_WHITE);
-            }
-            else
-            {
-                DrawIncreaseDecrease(item.x, item.y + 5, FALSE, COLOR_WHITE);
-                DrawTextB(item.x + 20, item.y + 15, FONTCOLOR_WHITE, 6, -1, "%s: %d%%", (LPSTR)item.label, *item.intValue);
-                DrawIncreaseDecrease(item.x + 100, item.y + 5, TRUE, COLOR_WHITE);
-            }
-            break;
-        case Button:
-        {
-            int textX = item.x;
-            int valueX = item.x + 150;
+                int textX = item.x;
+                int valueX = item.x + 150;
 
-            // Align these two rows with checkbox text in the same subsection.
-            if (item.callback == ToggleMartialArtSkillButtonInput || item.callback == ToggleFinisherSkillButtonInput)
-            {
-                textX = item.x + 18;
-                valueX = item.x + 168;
-            }
+                // Align these two rows with checkbox text in the same subsection.
+                if (item.callback == ToggleMartialArtSkillButtonInput || item.callback == ToggleFinisherSkillButtonInput)
+                {
+                    textX = item.x + 18;
+                    valueX = item.x + 168;
+                }
 
-            DrawTextB(textX, item.y, FONTCOLOR_WHITE, 6, -1, "%s", (LPSTR)item.label);
-            if (item.callback == ToggleMenuKeyInput)
-            {
-                DrawTextB(valueX, item.y, V_InputModeType == MODE_MENU_KEY ? FONTCOLOR_BLUE : FONTCOLOR_GOLD, 6, -1, "%s", GetKeyName(V_MainMenuKey));
+                DrawTextB(textX, item.y, FONTCOLOR_WHITE, 6, -1, "%s", (LPSTR)item.label);
+                if (item.callback == ToggleMenuKeyInput)
+                {
+                    DrawTextB(valueX, item.y, V_InputModeType == MODE_MENU_KEY ? FONTCOLOR_BLUE : FONTCOLOR_GOLD, 6, -1, "%s", GetKeyName(V_MainMenuKey));
+                }
+                else if (item.callback == ToggleRefillPotionsKeyInput)
+                {
+                    DrawTextB(valueX, item.y, V_InputModeType == MODE_REFILL_POTIONS_KEY ? FONTCOLOR_BLUE : FONTCOLOR_GOLD, 6, -1, "%s", GetKeyName(V_RefillPotionsKey));
+                }
+                else if (item.callback == TogglePickitKeyInput)
+                {
+                    DrawTextB(valueX, item.y, V_InputModeType == MODE_PICKIT_KEY ? FONTCOLOR_BLUE : FONTCOLOR_GOLD, 6, -1, "%s", GetKeyName(V_PickitKey));
+                }
+                else if (item.callback == ToggleAnyaBotKeyInput)
+                {
+                    DrawTextB(valueX, item.y, V_InputModeType == MODE_ANYA_BOT_KEY ? FONTCOLOR_BLUE : FONTCOLOR_GOLD, 6, -1, "%s", GetKeyName(V_AnyaBotKey));
+                }
+                else if (item.callback == ToggleTradeInviteReplyKeyInput)
+                {
+                    DrawTextB(valueX, item.y, V_InputModeType == MODE_TRADE_INVITE_REPLY_KEY ? FONTCOLOR_BLUE : FONTCOLOR_GOLD, 6, -1, "%s", GetKeyName(V_TradeInviteReplyKey));
+                }
+                else if (item.callback == ToggleBuildMAChargesKeyInput)
+                {
+                    DrawTextB(valueX, item.y, V_InputModeType == MODE_BUILD_MA_CHARGES_KEY ? FONTCOLOR_BLUE : FONTCOLOR_GOLD, 6, -1, "%s", GetKeyName(V_BuildMAChargesKey));
+                }
+                else if (item.callback == ToggleMAAutomateKeyInput)
+                {
+                    DrawTextB(valueX, item.y, V_InputModeType == MODE_MA_AUTOMATE_KEY ? FONTCOLOR_BLUE : FONTCOLOR_GOLD, 6, -1, "%s", GetKeyName(V_MAAutomateKey));
+                }
+                else if (item.callback == ToggleMartialArtSkillButtonInput)
+                {
+                    DrawTextB(valueX, item.y, V_InputModeType == MODE_MARTIAL_ART_SKILL_BUTTON ? FONTCOLOR_BLUE : FONTCOLOR_GOLD, 6, -1, "%s", GetKeyName(V_MartialArtSkillButton));
+                }
+                else if (item.callback == ToggleFinisherSkillButtonInput)
+                {
+                    DrawTextB(valueX, item.y, V_InputModeType == MODE_FINISHER_SKILL_BUTTON ? FONTCOLOR_BLUE : FONTCOLOR_GOLD, 6, -1, "%s", GetKeyName(V_FinisherSkillButton));
+                }
+                break;
             }
-            else if (item.callback == ToggleRefillPotionsKeyInput)
-            {
-                DrawTextB(valueX, item.y, V_InputModeType == MODE_REFILL_POTIONS_KEY ? FONTCOLOR_BLUE : FONTCOLOR_GOLD, 6, -1, "%s", GetKeyName(V_RefillPotionsKey));
+            case Label:
+                DrawTextB(item.x, item.y, FONTCOLOR_GOLD, 8, -1, "%s", (LPSTR)item.label);
+                break;
             }
-            else if (item.callback == TogglePickitKeyInput)
-            {
-                DrawTextB(valueX, item.y, V_InputModeType == MODE_PICKIT_KEY ? FONTCOLOR_BLUE : FONTCOLOR_GOLD, 6, -1, "%s", GetKeyName(V_PickitKey));
-            }
-            else if (item.callback == ToggleAnyaBotKeyInput)
-            {
-                DrawTextB(valueX, item.y, V_InputModeType == MODE_ANYA_BOT_KEY ? FONTCOLOR_BLUE : FONTCOLOR_GOLD, 6, -1, "%s", GetKeyName(V_AnyaBotKey));
-            }
-            else if (item.callback == ToggleTradeInviteReplyKeyInput)
-            {
-                DrawTextB(valueX, item.y, V_InputModeType == MODE_TRADE_INVITE_REPLY_KEY ? FONTCOLOR_BLUE : FONTCOLOR_GOLD, 6, -1, "%s", GetKeyName(V_TradeInviteReplyKey));
-            }
-            else if (item.callback == ToggleBuildMAChargesKeyInput)
-            {
-                DrawTextB(valueX, item.y, V_InputModeType == MODE_BUILD_MA_CHARGES_KEY ? FONTCOLOR_BLUE : FONTCOLOR_GOLD, 6, -1, "%s", GetKeyName(V_BuildMAChargesKey));
-            }
-            else if (item.callback == ToggleMAAutomateKeyInput)
-            {
-                DrawTextB(valueX, item.y, V_InputModeType == MODE_MA_AUTOMATE_KEY ? FONTCOLOR_BLUE : FONTCOLOR_GOLD, 6, -1, "%s", GetKeyName(V_MAAutomateKey));
-            }
-            else if (item.callback == ToggleMartialArtSkillButtonInput)
-            {
-                DrawTextB(valueX, item.y, V_InputModeType == MODE_MARTIAL_ART_SKILL_BUTTON ? FONTCOLOR_BLUE : FONTCOLOR_GOLD, 6, -1, "%s", GetKeyName(V_MartialArtSkillButton));
-            }
-            else if (item.callback == ToggleFinisherSkillButtonInput)
-            {
-                DrawTextB(valueX, item.y, V_InputModeType == MODE_FINISHER_SKILL_BUTTON ? FONTCOLOR_BLUE : FONTCOLOR_GOLD, 6, -1, "%s", GetKeyName(V_FinisherSkillButton));
-            }
-            break;
-        }
-        case Label:
-            DrawTextB(item.x, item.y, FONTCOLOR_GOLD, 8, -1, "%s", (LPSTR)item.label);
-            break;
         }
 
         if (!isThresholdSlider)
@@ -790,20 +896,81 @@ void DrawMenuColumn(std::vector<MenuItem> &column, int base_x, int &currentY)
     }
 }
 
+std::vector<MenuItem> &GetSelectedMenuItems()
+{
+    switch (g_selectedMenuTab)
+    {
+    case MENU_TAB_MONSTERS:
+        return g_menuMonsters;
+    case MENU_TAB_DEBUG:
+        return g_menuDebug;
+    case MENU_TAB_AUTOMATION:
+        return g_menuAutomation;
+    case MENU_TAB_HOTKEYS:
+        return g_menuHotkeys;
+    case MENU_TAB_MAP:
+    default:
+        return g_menuMap;
+    }
+}
+
+void DrawMenuTabs()
+{
+    const int tabX = GetMenuLeft() + 5;
+    const int tabY = GetMenuTop() + 40;
+    const int tabWidth = 100;
+    const int tabHeight = 20;
+
+    for (int i = 0; i < MENU_TAB_COUNT; ++i)
+    {
+        int x = tabX + (i * tabWidth);
+        DWORD color = i == g_selectedMenuTab ? FONTCOLOR_GOLD : FONTCOLOR_WHITE;
+
+        DrawBox(x, tabY, x + tabWidth - 8, tabY + tabHeight, COLOR_WHITE);
+        DrawTextB(x + 8, tabY + 15, color, 6, -1, "%s", g_menuTabNames[i]);
+    }
+}
+
+bool HandleMenuTabClick(int mouseX, int mouseY)
+{
+    const int tabX = GetMenuLeft() + 5;
+    const int tabY = GetMenuTop() + 40;
+    const int tabWidth = 100;
+    const int tabHeight = 20;
+
+    if (mouseY < tabY || mouseY > tabY + tabHeight)
+        return false;
+
+    for (int i = 0; i < MENU_TAB_COUNT; ++i)
+    {
+        int x = tabX + (i * tabWidth);
+        if (mouseX >= x && mouseX <= x + tabWidth - 8)
+        {
+            g_selectedMenuTab = i;
+            return true;
+        }
+    }
+
+    return false;
+}
+
 void DrawMenu()
 {
     if (!V_MainMenuOpen)
         return;
 
-    D2GFX_DrawRectangle(25, 10, 900, 590, 0, 1);
-    DrawTextB(30, 30, FONTCOLOR_GOLD, 7, -1, "EZPD2 Settings");
+    int menuLeft = GetMenuLeft();
+    int menuTop = GetMenuTop();
 
-    int currentY = 60;
-    DrawMenuColumn(g_menuColumn1, 30, currentY);
-    currentY = 60;
-    DrawMenuColumn(g_menuColumn2, 300, currentY);
-    currentY = 60;
-    DrawMenuColumn(g_menuColumn3, 570, currentY);
+    D2GFX_DrawRectangle(menuLeft, menuTop, menuLeft + MENU_WIDTH, menuTop + MENU_HEIGHT, 0, 1);
+    DrawTextB(menuLeft + 5, menuTop + 20, FONTCOLOR_GOLD, 7, -1, "EZPD2 Settings");
+    DrawMenuTabs();
+
+    int currentY = menuTop + MENU_VIEW_TOP;
+    DrawMenuColumn(GetSelectedMenuItems(), menuLeft + 15, currentY, g_menuScrollOffsets[g_selectedMenuTab]);
+
+    if (g_menuScrollOffsets[g_selectedMenuTab] > 0)
+        DrawTextB(menuLeft + MENU_WIDTH - 55, menuTop + MENU_VIEW_TOP - 5, FONTCOLOR_LIGHTGREY, 6, -1, "scroll: %d", g_menuScrollOffsets[g_selectedMenuTab]);
 }
 
 bool HandleMenuClickColumn(std::vector<MenuItem> &column, int mouseX, int mouseY)
@@ -812,6 +979,11 @@ bool HandleMenuClickColumn(std::vector<MenuItem> &column, int mouseX, int mouseY
     {
         MenuItem &item = column[i];
         bool clicked = false;
+
+        int menuTop = GetMenuTop();
+        if (item.y < menuTop + MENU_VIEW_TOP || item.y > menuTop + MENU_VIEW_BOTTOM)
+            continue;
+
         switch (item.type)
         {
         case Category:
@@ -897,15 +1069,31 @@ bool HandleMenuClickColumn(std::vector<MenuItem> &column, int mouseX, int mouseY
     return false;
 }
 
-void HandleMenuClick(int mouseX, int mouseY)
+void HandleMenuScroll(int delta)
 {
     if (!V_MainMenuOpen)
         return;
 
-    if (HandleMenuClickColumn(g_menuColumn1, mouseX, mouseY))
-        return;
-    if (HandleMenuClickColumn(g_menuColumn2, mouseX, mouseY))
-        return;
-    if (HandleMenuClickColumn(g_menuColumn3, mouseX, mouseY))
-        return;
+    int &scrollOffset = g_menuScrollOffsets[g_selectedMenuTab];
+
+    if (delta > 0)
+        scrollOffset -= 40;
+    else if (delta < 0)
+        scrollOffset += 40;
+
+    if (scrollOffset < 0)
+        scrollOffset = 0;
+    if (scrollOffset > 1000)
+        scrollOffset = 1000;
+}
+
+bool HandleMenuClick(int mouseX, int mouseY)
+{
+    if (!V_MainMenuOpen)
+        return false;
+
+    if (HandleMenuTabClick(mouseX, mouseY))
+        return true;
+
+    return HandleMenuClickColumn(GetSelectedMenuItems(), mouseX, mouseY);
 }

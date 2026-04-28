@@ -101,6 +101,19 @@ static VOID HandleGameplayHotkeys(INT vk)
     }
 }
 
+static BOOL IsMenuMouseMessage(UINT msg)
+{
+    return msg == WM_LBUTTONDOWN ||
+           msg == WM_LBUTTONUP ||
+           msg == WM_RBUTTONDOWN ||
+           msg == WM_RBUTTONUP ||
+           msg == WM_MBUTTONDOWN ||
+           msg == WM_MBUTTONUP ||
+           msg == WM_XBUTTONDOWN ||
+           msg == WM_XBUTTONUP ||
+           msg == WM_MOUSEWHEEL;
+}
+
 LONG STDCALL WindowProc(HWND HWnd, UINT MSG, WPARAM WParam, LPARAM LParam)
 {
     if (V_IsHotkeyInputMode)
@@ -108,12 +121,12 @@ LONG STDCALL WindowProc(HWND HWnd, UINT MSG, WPARAM WParam, LPARAM LParam)
         if (MSG == WM_LBUTTONDOWN)
         {
             FinishHotkeyBind(VK_LBUTTON);
-            return CallWindowProcA(V_OldWndProc, HWnd, MSG, WParam, LParam);
+            return 0;
         }
         if (MSG == WM_RBUTTONDOWN)
         {
             FinishHotkeyBind(VK_RBUTTON);
-            return CallWindowProcA(V_OldWndProc, HWnd, MSG, WParam, LParam);
+            return 0;
         }
         if (MSG == WM_XBUTTONDOWN)
         {
@@ -121,7 +134,7 @@ LONG STDCALL WindowProc(HWND HWnd, UINT MSG, WPARAM WParam, LPARAM LParam)
             if (vk != 0)
             {
                 FinishHotkeyBind(vk);
-                return CallWindowProcA(V_OldWndProc, HWnd, MSG, WParam, LParam);
+                return 0;
             }
         }
         if (MSG == WM_KEYDOWN)
@@ -169,18 +182,28 @@ LONG STDCALL WindowProc(HWND HWnd, UINT MSG, WPARAM WParam, LPARAM LParam)
 
     else
     {
-        if (MSG == WM_KEYDOWN)
+        if (V_MainMenuOpen && MSG == WM_LBUTTONDOWN)
+        {
+            POINT mousePos = { *p_D2CLIENT_MouseX, *p_D2CLIENT_MouseY };
+            HandleMenuClick(mousePos.x, mousePos.y);
+            return 0;
+        }
+        else if (V_MainMenuOpen && MSG == WM_MOUSEWHEEL)
+        {
+            HandleMenuScroll((SHORT)HIWORD(WParam));
+            return 0;
+        }
+        else if (V_MainMenuOpen && IsMenuMouseMessage(MSG))
+        {
+            return 0;
+        }
+        else if (MSG == WM_KEYDOWN)
         {
             HandleGameplayHotkeys((INT)WParam);
         }
         else if (MSG == WM_XBUTTONDOWN)
         {
             HandleGameplayHotkeys(XButtonWParamToVk(WParam));
-        }
-        else if (MSG == WM_LBUTTONDOWN && V_MainMenuOpen)
-        {
-            POINT mousePos = { *p_D2CLIENT_MouseX, *p_D2CLIENT_MouseY };
-            HandleMenuClick(mousePos.x, mousePos.y);
         }
     }
 
