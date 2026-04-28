@@ -11,7 +11,8 @@ enum MenuItemType {
     IntSlider,
     Button,
     Label,
-    Category
+    Category,
+    ColorPick
 };
 
 struct MenuItem {
@@ -34,4 +35,6 @@ struct MenuItem {
 void InitMenu();
 void DrawMenu();
 bool HandleMenuClick(int mouseX, int mouseY);
+bool HandleMenuRightClick(int mouseX, int mouseY);
+void ResetMenuMonsterColorPicker();
 void HandleMenuScroll(int delta);

@@ -7,7 +7,8 @@
 #define TOGGLE(Name) \
     BOOL V_##Name;   \
     INT K_##Name;
-#define VAR(Type, Name) Type V##_##Name;
+/* Must match non-VARS branch: V_##Name only. V##_##Name wrongly becomes V__Name vs extern V_Name. */
+#define VAR(Type, Name) Type V_##Name;
 
 #else
 
@@ -66,6 +67,19 @@ VAR(BOOL, DrawChampBossMonsters)
 VAR(BOOL, DrawNormalMonsters)
 VAR(DWORD, MonsterMarkerStyle)
 VAR(DWORD, MonsterMarkerFontSize)
+VAR(DWORD, MonsterNormalColor)
+VAR(DWORD, MonsterMinionColor)
+VAR(DWORD, MonsterChampionColor)
+VAR(DWORD, MonsterBossColor)
+// Hardcoded txt-list bosses (ActualBossTextFileNo / InterestingMonsterTextFileNo) on automap
+VAR(BOOL, DrawListedBossMarkers)
+VAR(DWORD, ListedBossCrossColor)
+VAR(DWORD, ListedBossNameColor)
+VAR(BOOL, ListedBossHpInName)
+VAR(DWORD, MonsterResistTextOffsetX)
+VAR(DWORD, MonsterResistTextOffsetY)
+VAR(BOOL, DrawMonsterResistances)
+VAR(BOOL, DrawMonsterEnchantments)
 
 VAR(BOOL, DrawShrines)
 VAR(BOOL, DrawGoodShrines)

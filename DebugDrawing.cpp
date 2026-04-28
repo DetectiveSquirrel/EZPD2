@@ -2,9 +2,6 @@
 
 VOID DrawMouseCoordinates()
 {
-	if (V_MainMenuOpen)
-		return;
-
 	DrawTextB(10, 10, FONTCOLOR_WHITE, 6, -1, "Mouse X: %d", *p_D2CLIENT_MouseX);
 	DrawTextB(10, 20, FONTCOLOR_WHITE, 6, -1, "Mouse Y: %d", *p_D2CLIENT_MouseY);
 
@@ -41,9 +38,6 @@ VOID DrawMouseCoordinates()
 
 VOID DrawClosestMonsterStats()
 {
-	if (V_MainMenuOpen)
-		return;
-
 	LPUNITANY closestMonster = GetClosestUnit(UNIT_TYPE_NPC);
 	if (closestMonster)
 	{
@@ -154,10 +148,6 @@ VOID DrawClosestMonsterStats()
 
 VOID DrawPlayerInventoryItems()
 {
-
-	if (V_MainMenuOpen)
-		return;
-
 	if (!Me || !Me->pInventory || !Me->pInventory->pFirstItem)
 		return;
 
@@ -290,9 +280,6 @@ VOID DrawPlayerInventoryItems()
 
 VOID DrawPlayerBeltItems()
 {
-	if (V_MainMenuOpen)
-		return;
-
 	if (!Me || !Me->pInventory || !Me->pInventory->pFirstItem)
 		return;
 
@@ -452,7 +439,7 @@ VOID DrawPlayerBeltItems()
 
 VOID DrawNearestItem()
 {
-	if (V_MainMenuOpen || !GameReady())
+	if (!GameReady())
 		return;
 
 	LPUNITANY pItem = GetClosestUnit(UNIT_TYPE_ITEM);
@@ -570,9 +557,6 @@ VOID DrawNearestItem()
 
 VOID DrawCurrentRoomInfo()
 {
-	if (V_MainMenuOpen)
-		return;
-
 	if (!Me || !Me->pPath || !Me->pPath->pRoom1)
 		return;
 

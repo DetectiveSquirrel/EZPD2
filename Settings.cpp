@@ -1,10 +1,10 @@
 #include "Hack.h"
-#include <string>
-#include <vector>
 #include <fstream>
-#include <algorithm>
+#include <map>
+#include <sstream>
+#include <string>
 
-const char *SETTINGS_FILE = "EZPD2Settings.ini";
+static const char *SETTINGS_FILE = "EZPD2Settings.json";
 
 enum SettingType {
     SETTING_INT,
@@ -13,14 +13,13 @@ enum SettingType {
 };
 
 struct Setting {
-    const char* key;
-    void* valuePtr;
+    const char *key;
+    void *valuePtr;
     SettingType type;
-    int defaultValue; // Used for int, BOOL, and DWORD
+    int defaultValue;
 };
 
-// Centralized settings definition
-Setting g_settings[] = {
+static Setting g_settings[] = {
     {"MainMenuKey", &V_MainMenuKey, SETTING_INT, VK_F7},
     {"RefillPotionsKey", &V_RefillPotionsKey, SETTING_INT, 0},
     {"PickitKey", &V_PickitKey, SETTING_INT, 0},
@@ -34,8 +33,20 @@ Setting g_settings[] = {
     {"NearbyEntitiesEnabled", &V_NearbyEntitiesEnabled, SETTING_BOOL, TRUE},
     {"DrawChampBossMonsters", &V_DrawChampBossMonsters, SETTING_BOOL, TRUE},
     {"DrawNormalMonsters", &V_DrawNormalMonsters, SETTING_BOOL, TRUE},
-    {"MonsterMarkerStyle", &V_MonsterMarkerStyle, SETTING_DWORD, MONSTER_MARKER_STYLE_X},
+    {"MonsterMarkerStyle", &V_MonsterMarkerStyle, SETTING_DWORD, MONSTER_MARKER_STYLE_CROSS},
     {"MonsterMarkerFontSize", &V_MonsterMarkerFontSize, SETTING_DWORD, 12},
+    {"MonsterNormalColor", &V_MonsterNormalColor, SETTING_DWORD, BH_AUTOMAP_MONSTER_COLOR_NORMAL},
+    {"MonsterMinionColor", &V_MonsterMinionColor, SETTING_DWORD, BH_AUTOMAP_MONSTER_COLOR_MINION},
+    {"MonsterChampionColor", &V_MonsterChampionColor, SETTING_DWORD, BH_AUTOMAP_MONSTER_COLOR_CHAMPION},
+    {"MonsterBossColor", &V_MonsterBossColor, SETTING_DWORD, BH_AUTOMAP_MONSTER_COLOR_BOSS},
+    {"DrawListedBossMarkers", &V_DrawListedBossMarkers, SETTING_BOOL, TRUE},
+    {"ListedBossCrossColor", &V_ListedBossCrossColor, SETTING_DWORD, BH_AUTOMAP_MONSTER_COLOR_BOSS},
+    {"ListedBossNameColor", &V_ListedBossNameColor, SETTING_DWORD, FONTCOLOR_PINK},
+    {"ListedBossHpInName", &V_ListedBossHpInName, SETTING_BOOL, TRUE},
+    {"MonsterResistTextOffsetX", &V_MonsterResistTextOffsetX, SETTING_DWORD, 10},
+    {"MonsterResistTextOffsetY", &V_MonsterResistTextOffsetY, SETTING_DWORD, 10},
+    {"DrawMonsterResistances", &V_DrawMonsterResistances, SETTING_BOOL, FALSE},
+    {"DrawMonsterEnchantments", &V_DrawMonsterEnchantments, SETTING_BOOL, FALSE},
     {"DrawShrines", &V_DrawShrines, SETTING_BOOL, TRUE},
     {"DrawGoodShrines", &V_DrawGoodShrines, SETTING_BOOL, TRUE},
     {"DrawOtherShrines", &V_DrawOtherShrines, SETTING_BOOL, TRUE},
@@ -79,125 +90,263 @@ Setting g_settings[] = {
     {"FinisherSkillButton", &V_FinisherSkillButton, SETTING_INT, VK_LBUTTON},
 };
 
-const int g_numSettings = sizeof(g_settings) / sizeof(g_settings[0]);
+static const int g_numSettings = (int)(sizeof(g_settings) / sizeof(g_settings[0]));
 
-std::string GetDllDirectory()
+static std::string GetEzpd2ModuleDirectory()
 {
     char dllPath[MAX_PATH] = {0};
     GetModuleFileName(V_DLL, dllPath, MAX_PATH);
     std::string fullPath(dllPath);
-    size_t lastSlash = fullPath.find_last_of("\\");
-    if (lastSlash != std::string::npos) {
+    size_t lastSlash = fullPath.find_last_of("\\/");
+    if (lastSlash != std::string::npos)
         return fullPath.substr(0, lastSlash + 1);
-    }
     return "";
 }
 
-void InitDefaultSettings() {
-    for (int i = 0; i < g_numSettings; ++i) {
-        Setting& s = g_settings[i];
-        switch (s.type) {
-            case SETTING_INT:
-                *(static_cast<int*>(s.valuePtr)) = s.defaultValue;
-                break;
-            case SETTING_BOOL:
-                *(static_cast<BOOL*>(s.valuePtr)) = s.defaultValue;
-                break;
-            case SETTING_DWORD:
-                *(static_cast<DWORD*>(s.valuePtr)) = s.defaultValue;
-                break;
-        }
-    }
+static void DeleteLegacyIniIfPresent()
+{
+    std::string legacyIni = GetEzpd2ModuleDirectory() + "EZPD2Settings.ini";
+    DeleteFileA(legacyIni.c_str());
 }
 
-bool SaveSettings() {
-    std::string settingsPath = GetDllDirectory() + SETTINGS_FILE;
-    std::ofstream file(settingsPath.c_str());
-    if (!file.is_open()) {
-        return false;
-    }
+static void ClampMonsterAutomapColorsToPalette()
+{
+    V_MonsterNormalColor &= 0xFFu;
+    V_MonsterMinionColor &= 0xFFu;
+    V_MonsterChampionColor &= 0xFFu;
+    V_MonsterBossColor &= 0xFFu;
+    V_ListedBossCrossColor &= 0xFFu;
+    if (V_ListedBossNameColor > FONTCOLOR_RED)
+        V_ListedBossNameColor = FONTCOLOR_RED;
+}
 
-    for (int i = 0; i < g_numSettings; ++i) {
-        Setting& s = g_settings[i];
-        file << s.key << "=";
-        switch (s.type) {
-            case SETTING_INT:
-                file << *(static_cast<int*>(s.valuePtr));
-                break;
-            case SETTING_BOOL:
-                file << (*(static_cast<BOOL*>(s.valuePtr)) ? "1" : "0");
-                break;
-            case SETTING_DWORD:
-                file << *(static_cast<DWORD*>(s.valuePtr));
-                break;
+static void InitDefaultSettings()
+{
+    for (int i = 0; i < g_numSettings; ++i)
+    {
+        Setting &s = g_settings[i];
+        switch (s.type)
+        {
+        case SETTING_INT:
+            *(static_cast<int *>(s.valuePtr)) = s.defaultValue;
+            break;
+        case SETTING_BOOL:
+            *(static_cast<BOOL *>(s.valuePtr)) = s.defaultValue;
+            break;
+        case SETTING_DWORD:
+            *(static_cast<DWORD *>(s.valuePtr)) = (DWORD)s.defaultValue;
+            break;
         }
-        file << std::endl;
     }
+    ClampMonsterAutomapColorsToPalette();
+}
 
-    file.close();
+// --- Minimal JSON (one object, string keys, integer values only) ---
+
+static void SkipWs(const char *&p)
+{
+    while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r')
+        ++p;
+}
+
+static bool ParseJsonString(const char *&p, std::string &out)
+{
+    out.clear();
+    if (*p != '"')
+        return false;
+    ++p;
+    while (*p != '\0')
+    {
+        if (*p == '"')
+        {
+            ++p;
+            return true;
+        }
+        if (*p == '\\' && p[1] != '\0')
+        {
+            ++p;
+            out += *p++;
+            continue;
+        }
+        out += *p++;
+    }
+    return false;
+}
+
+static bool ParseJsonInt(const char *&p, long long &out)
+{
+    SkipWs(p);
+    bool neg = false;
+    if (*p == '-')
+    {
+        neg = true;
+        ++p;
+    }
+    if (*p < '0' || *p > '9')
+        return false;
+    unsigned long long n = 0;
+    while (*p >= '0' && *p <= '9')
+    {
+        n = n * 10u + (unsigned)(*p - '0');
+        ++p;
+    }
+    if (neg)
+    {
+        out = 0LL - (long long)n;
+        return true;
+    }
+    out = (long long)n;
     return true;
 }
 
-// Helper to trim whitespace
-std::string trim(const std::string& str) {
-    size_t first = str.find_first_not_of(" \t\r\n");
-    if (std::string::npos == first) {
-        return str;
+static bool ParseJsonObject(const char *&p, std::map<std::string, long long> &kv)
+{
+    SkipWs(p);
+    if (*p != '{')
+        return false;
+    ++p;
+    SkipWs(p);
+    if (*p == '}')
+    {
+        ++p;
+        return true;
     }
-    size_t last = str.find_last_not_of(" \t\r\n");
-    return str.substr(first, (last - first + 1));
+    for (;;)
+    {
+        std::string key;
+        if (!ParseJsonString(p, key))
+            return false;
+        SkipWs(p);
+        if (*p != ':')
+            return false;
+        ++p;
+        SkipWs(p);
+        long long v;
+        if (!ParseJsonInt(p, v))
+            return false;
+        kv[key] = v;
+        SkipWs(p);
+        if (*p == '}')
+        {
+            ++p;
+            return true;
+        }
+        if (*p != ',')
+            return false;
+        ++p;
+        SkipWs(p);
+    }
 }
 
-bool LoadSettings() {
+static bool ReadEntireFile(const std::string &path, std::string &out)
+{
+    std::ifstream f(path.c_str(), std::ios::binary);
+    if (!f.is_open())
+        return false;
+    std::ostringstream ss;
+    ss << f.rdbuf();
+    out = ss.str();
+    return true;
+}
+
+static void ApplySettingsFromMap(const std::map<std::string, long long> &kv)
+{
+    for (int i = 0; i < g_numSettings; ++i)
+    {
+        Setting &s = g_settings[i];
+        std::map<std::string, long long>::const_iterator it = kv.find(s.key);
+        if (it == kv.end())
+            continue;
+        long long v = it->second;
+        switch (s.type)
+        {
+        case SETTING_INT:
+            *(static_cast<int *>(s.valuePtr)) = (int)v;
+            break;
+        case SETTING_BOOL:
+            *(static_cast<BOOL *>(s.valuePtr)) = (v != 0) ? TRUE : FALSE;
+            break;
+        case SETTING_DWORD:
+            if (v < 0)
+                v = 0;
+            *(static_cast<DWORD *>(s.valuePtr)) = (DWORD)v;
+            break;
+        }
+    }
+    ClampMonsterAutomapColorsToPalette();
+}
+
+static std::string BuildSettingsJson()
+{
+    std::ostringstream o;
+    o << "{\n  \"settingsVersion\": 1";
+    for (int i = 0; i < g_numSettings; ++i)
+    {
+        Setting &s = g_settings[i];
+        o << ",\n  \"" << s.key << "\": ";
+        switch (s.type)
+        {
+        case SETTING_INT:
+            o << *(static_cast<int *>(s.valuePtr));
+            break;
+        case SETTING_BOOL:
+            o << (*(static_cast<BOOL *>(s.valuePtr)) ? 1 : 0);
+            break;
+        case SETTING_DWORD:
+            o << *(static_cast<DWORD *>(s.valuePtr));
+            break;
+        }
+    }
+    o << "\n}\n";
+    return o.str();
+}
+
+bool SaveSettings()
+{
+    std::string path = GetEzpd2ModuleDirectory() + SETTINGS_FILE;
+    std::string json = BuildSettingsJson();
+    std::ofstream file(path.c_str(), std::ios::out | std::ios::binary | std::ios::trunc);
+    if (!file.is_open())
+        return false;
+    file.write(json.data(), (std::streamsize)json.size());
+    file.flush();
+    bool ok = file.good();
+    file.close();
+    if (ok)
+        DeleteLegacyIniIfPresent();
+    return ok;
+}
+
+bool LoadSettings()
+{
     InitDefaultSettings();
 
-    std::string settingsPath = GetDllDirectory() + SETTINGS_FILE;
-    std::ifstream file(settingsPath.c_str());
-    if (!file.is_open()) {
-        SaveSettings(); // Create a default settings file
+    std::string path = GetEzpd2ModuleDirectory() + SETTINGS_FILE;
+    std::string raw;
+    if (!ReadEntireFile(path, raw) || raw.empty())
+    {
+        SaveSettings();
         return false;
     }
 
-    std::string line;
-    while (std::getline(file, line)) {
-        // Remove comments
-        size_t comment_pos = line.find(';');
-        if (comment_pos != std::string::npos) {
-            line = line.substr(0, comment_pos);
-        }
-        
-        // Find separator
-        size_t separator_pos = line.find('=');
-        if (separator_pos == std::string::npos) {
-            continue;
-        }
+    const char *p = raw.c_str();
+    if (raw.size() >= 3 && (unsigned char)p[0] == 0xEF && (unsigned char)p[1] == 0xBB && (unsigned char)p[2] == 0xBF)
+        p += 3;
 
-        std::string key = trim(line.substr(0, separator_pos));
-        std::string value = trim(line.substr(separator_pos + 1));
-
-        if (key.empty()) {
-            continue;
-        }
-
-        for (int i = 0; i < g_numSettings; ++i) {
-            if (_stricmp(g_settings[i].key, key.c_str()) == 0) {
-                Setting& s = g_settings[i];
-                switch (s.type) {
-                    case SETTING_INT:
-                        *(static_cast<int*>(s.valuePtr)) = atoi(value.c_str());
-                        break;
-                    case SETTING_BOOL:
-                        *(static_cast<BOOL*>(s.valuePtr)) = (atoi(value.c_str()) != 0);
-                        break;
-                    case SETTING_DWORD:
-                        *(static_cast<DWORD*>(s.valuePtr)) = strtoul(value.c_str(), NULL, 10);
-                        break;
-                }
-                break; // Found key, move to next line
-            }
-        }
+    std::map<std::string, long long> kv;
+    if (!ParseJsonObject(p, kv))
+    {
+        SaveSettings();
+        return false;
+    }
+    SkipWs(p);
+    if (*p != '\0')
+    {
+        SaveSettings();
+        return false;
     }
 
-    file.close();
+    ApplySettingsFromMap(kv);
+    DeleteLegacyIniIfPresent();
     return true;
 }

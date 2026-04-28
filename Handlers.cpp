@@ -101,17 +101,15 @@ static VOID HandleGameplayHotkeys(INT vk)
     }
 }
 
-static BOOL IsMenuMouseMessage(UINT msg)
+static VOID HandleGameplayKeyDown(INT vk, LPARAM lParam)
 {
-    return msg == WM_LBUTTONDOWN ||
-           msg == WM_LBUTTONUP ||
-           msg == WM_RBUTTONDOWN ||
-           msg == WM_RBUTTONUP ||
-           msg == WM_MBUTTONDOWN ||
-           msg == WM_MBUTTONUP ||
-           msg == WM_XBUTTONDOWN ||
-           msg == WM_XBUTTONUP ||
-           msg == WM_MOUSEWHEEL;
+    if (vk <= 0 || vk >= 256)
+        return;
+
+	if (lParam & (1 << 30))
+        return;
+
+    HandleGameplayHotkeys(vk);
 }
 
 LONG STDCALL WindowProc(HWND HWnd, UINT MSG, WPARAM WParam, LPARAM LParam)
@@ -186,20 +184,19 @@ LONG STDCALL WindowProc(HWND HWnd, UINT MSG, WPARAM WParam, LPARAM LParam)
         {
             POINT mousePos = { *p_D2CLIENT_MouseX, *p_D2CLIENT_MouseY };
             HandleMenuClick(mousePos.x, mousePos.y);
-            return 0;
+        }
+        else if (V_MainMenuOpen && MSG == WM_RBUTTONDOWN)
+        {
+            POINT mousePos = { *p_D2CLIENT_MouseX, *p_D2CLIENT_MouseY };
+            HandleMenuRightClick(mousePos.x, mousePos.y);
         }
         else if (V_MainMenuOpen && MSG == WM_MOUSEWHEEL)
         {
             HandleMenuScroll((SHORT)HIWORD(WParam));
-            return 0;
         }
-        else if (V_MainMenuOpen && IsMenuMouseMessage(MSG))
+		else if (MSG == WM_KEYDOWN || MSG == WM_SYSKEYDOWN)
         {
-            return 0;
-        }
-        else if (MSG == WM_KEYDOWN)
-        {
-            HandleGameplayHotkeys((INT)WParam);
+			HandleGameplayKeyDown((INT)WParam, LParam);
         }
         else if (MSG == WM_XBUTTONDOWN)
         {
@@ -268,10 +265,31 @@ VOID InitializeHack()
     if (V_Initialized)
         return;
 
-    LoadSettings();
-    if (V_MainMenuKey == 0) V_MainMenuKey = VK_F7;
+    static BOOL s_settingsLoadedOnce;
+    if (!s_settingsLoadedOnce)
+    {
+        LoadSettings();
+        if (V_MainMenuKey == 0)
+            V_MainMenuKey = VK_F7;
+        s_settingsLoadedOnce = TRUE;
+    }
+
+    // Re-read INI once the game is up (DllMain load can race cwd / first-run ini; matches stable game state).
+    static BOOL s_settingsReloadInGame;
+    if (!V_Initialized && GameReady() && !s_settingsReloadInGame)
+    {
+        LoadSettings();
+        s_settingsReloadInGame = TRUE;
+    }
+
     SetDefaultMenuVars();
-    InitMenu();
+
+    static BOOL s_menuInitializedOnce;
+    if (!s_menuInitializedOnce)
+    {
+        InitMenu();
+        s_menuInitializedOnce = TRUE;
+    }
 
     if (GameReady())
     {
@@ -311,6 +329,8 @@ VOID SetDefaultMenuVars()
     V_IsHotkeyInputMode = FALSE;
     V_InputModeType = MODE_NONE;
     V_MainMenuOpen = FALSE;
+
+    ResetMenuMonsterColorPicker();
 
     V_IsRefillingPotions = FALSE;
     V_ItemSlotLocationToFill.x = -1;

@@ -1,5 +1,7 @@
 #pragma once
 
+struct RosterUnit;
+
 #define ArraySize(X) (sizeof(X) / sizeof(X[0]))
 #define KeyDown(Code) ((GetAsyncKeyState(Code) & 0x8000) ? TRUE : FALSE)
 #define VALIDPTR(x) ((x) && (!IsBadReadPtr(x, sizeof(x))))
@@ -18,6 +20,9 @@ RECT GetSafeScreenAreaRect(VOID);
 POINT AdjustAutomapLabelPosition(POINT point);
 BOOL IsPointInRect(POINT &pt, RECT &rect);
 BOOL IsValidMonster(LPUNITANY Unit);
+struct RosterUnit *FindPlayerRoster(DWORD unitId);
+INT GetRelation(LPUNITANY unit);
+DWORD ItemColorFromQuality(DWORD quality);
 BOOL IsTownLevel(INT nLevel);
 BOOL IsPlayerInTown();
 LPCSTR GetKeyName(int vkCode);

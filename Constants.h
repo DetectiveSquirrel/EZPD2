@@ -67,6 +67,14 @@
 #define PVP_HOSTILED_BY_YOU 0x10 // Hostiled by you, but he may not have hostiled you
 #define PVP_ALLIED_WITH_YOU 0x20 // Allied with you
 
+#define INVALID_PARTY_ID 0xFFFF
+
+// SlashDiablo-style unit relation for coloring / filtering (GetRelation).
+#define UNIT_RELATION_YOU 1
+#define UNIT_RELATION_NEUTRAL 2
+#define UNIT_RELATION_PARTY 3
+#define UNIT_RELATION_HOSTILE 4
+
 //////////////////////////////////////////////////////////////////////////
 // Player Type Flags
 //////////////////////////////////////////////////////////////////////////

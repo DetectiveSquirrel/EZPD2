@@ -29,3 +29,17 @@ DWORD NAKED FASTCALL GetUIVarSTUB(DWORD UI)
 		JMP D2CLIENT_GetUiVar_I;
     }
 }
+
+DWORD NAKED FASTCALL TestPvpFlag_STUB(DWORD playerId1, DWORD playerId2, DWORD flagmask)
+{
+	__asm
+	{
+		push esi;
+		push dword ptr [esp + 8];
+		mov esi, edx;
+		mov edx, ecx;
+		call D2CLIENT_TestPvPFlag_I;
+		pop esi;
+		ret 4;
+	}
+}

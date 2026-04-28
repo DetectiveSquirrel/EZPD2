@@ -688,6 +688,80 @@ BOOL IsPointInRect(POINT &pt, RECT &rect)
 	return pt.x >= rect.left && pt.x <= rect.right && pt.y >= rect.top && pt.y <= rect.bottom;
 }
 
+RosterUnit *FindPlayerRoster(DWORD unitId)
+{
+	for (RosterUnit *roster = *p_D2CLIENT_PlayerUnitList; roster; roster = roster->pNext)
+	{
+		if (roster->dwUnitId == unitId)
+			return roster;
+	}
+	return NULL;
+}
+
+INT GetRelation(LPUNITANY unit)
+{
+	LPUNITANY player = D2CLIENT_GetPlayerUnit();
+	RosterUnit *playerRoster = player ? FindPlayerRoster(player->dwUnitId) : NULL;
+
+	if (!unit || !player)
+		return UNIT_RELATION_NEUTRAL;
+
+	switch (unit->dwType)
+	{
+	case UNIT_PLAYER:
+		if (unit->dwUnitId == player->dwUnitId)
+			return UNIT_RELATION_YOU;
+
+		{
+			RosterUnit *roster = FindPlayerRoster(unit->dwUnitId);
+			if (playerRoster && roster && playerRoster->wPartyId == roster->wPartyId && roster->wPartyId != INVALID_PARTY_ID)
+				return UNIT_RELATION_PARTY;
+		}
+
+		if (TestPvpFlag_STUB(unit->dwUnitId, player->dwUnitId, PVP_HOSTILED_YOU))
+			return UNIT_RELATION_HOSTILE;
+
+		return UNIT_RELATION_NEUTRAL;
+
+	case UNIT_MONSTER:
+	case UNIT_MISSLE:
+		if ((INT)unit->dwOwnerId < 0 || (INT)unit->dwOwnerType < 0 || unit->dwOwnerType > UNIT_TILE)
+			return UNIT_RELATION_HOSTILE;
+
+		if (unit->dwType == UNIT_MONSTER && unit->dwOwnerType == UNIT_MONSTER)
+			return UNIT_RELATION_HOSTILE;
+
+		{
+			LPUNITANY owner = D2CLIENT_FindServerSideUnit(unit->dwOwnerId, unit->dwOwnerType);
+			if (!owner || owner->dwType != unit->dwOwnerType || owner->dwUnitId != unit->dwOwnerId)
+				return UNIT_RELATION_HOSTILE;
+
+			return GetRelation(owner);
+		}
+
+	default:
+		return UNIT_RELATION_NEUTRAL;
+	}
+}
+
+DWORD ItemColorFromQuality(DWORD quality)
+{
+	static const DWORD tbl[] = {
+		FONTCOLOR_WHITE,	  // none
+		FONTCOLOR_WHITE,	  // inferior
+		FONTCOLOR_WHITE,	  // normal
+		FONTCOLOR_WHITE,	  // superior
+		FONTCOLOR_BLUE,		  // magic
+		FONTCOLOR_LIGHTGREEN, // set
+		FONTCOLOR_YELLOW,	  // rare
+		FONTCOLOR_GOLD,		  // unique
+		FONTCOLOR_ORANGE,	  // craft
+	};
+	if (quality >= ArraySize(tbl))
+		return FONTCOLOR_WHITE;
+	return tbl[quality];
+}
+
 BOOL IsValidMonster(LPUNITANY Unit)
 {
 	if (!Unit)
@@ -707,18 +781,23 @@ BOOL IsValidMonster(LPUNITANY Unit)
 
 	if ((Unit->dwTxtFileNo == 356 || Unit->dwTxtFileNo == 357 || Unit->dwTxtFileNo == 424 || Unit->dwTxtFileNo == 425 ||
 		 Unit->dwTxtFileNo == 418 || Unit->dwTxtFileNo == 419 || Unit->dwTxtFileNo == 421) &&
-		Unit->dwOwnerId == Me->dwUnitId)
+		Me && Unit->dwOwnerId == Me->dwUnitId)
+		return FALSE;
+
+	if (D2COMMON_GetUnitStat(Unit, STAT_ALIGNMENT, 0) == 2)
 		return FALSE;
 
 	DWORD Bad[] =
 		{
 			146, 147, 148, 150, 154, 155, 175, 176, 177, 178, 198, 199, 200, 201, 202, 210, 244, 245, 246, 251, 252, 253, 254, 255, 257, 264,
 			265, 266, 270, 283, 297, 326, 327, 328, 329, 330, 331, 338, 351, 352, 353, 359, 366, 367, 405, 406, 408, 410, 411, 412, 413, 414,
-			415, 416, 511, 512, 513, 514, 515, 516, 517, 518, 519, 520, 521, 522, 523, 528, 535, 542, 543,
+			415, 416, 511, 512, 513, 514, 515, 516, 517, 518, 519, 520, 521, 522, 523, 528, 535, 542, 543, 545,
+			227, // SlashDiablo hide list
+			787, // Hydra (sorceress summon; automap clutter)
 			1057 // Demonic Sentinel
 		};
 
-	for (DWORD i = 0; i < ArraySize(Bad) - 1; i++)
+	for (DWORD i = 0; i < ArraySize(Bad); i++)
 		if (Unit->dwTxtFileNo == Bad[i])
 			return FALSE;
 
@@ -727,7 +806,12 @@ BOOL IsValidMonster(LPUNITANY Unit)
 
 	WideCharToMultiByte(CP_ACP, 0, Name, -1, MonsterName, (INT)sizeof(MonsterName), 0, 0);
 
-	if (!strcmp(MonsterName, "an evil force") || !strcmp(MonsterName, "dummy") || !strcmp(MonsterName, "Trapped Soul"))
+	if (!strcmp(MonsterName, "an evil force") || !strcmp(MonsterName, "dummy") || !strcmp(MonsterName, "Trapped Soul") ||
+		!strcmp(MonsterName, "Maggot"))
+		return FALSE;
+
+	// Display name for Fire Hydra (matches debug overlay); catches row drift if txt != 787 in a patch.
+	if (!strcmp(MonsterName, "Hydra"))
 		return FALSE;
 
 	return TRUE;

@@ -4,6 +4,10 @@
 .cursor
 .claude
 
+# Runtime next to EZPD2.dll
+EZPD2Settings.json
+EZPD2Settings.ini
+
 ### C++ ###
 # Prerequisites
 *.d

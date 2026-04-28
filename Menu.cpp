@@ -1,5 +1,6 @@
 #include "Hack.h"
 #include "Menu.h"
+#include "Settings.h"
 #include <cstring>
 
 std::vector<MenuItem> g_menuColumn1;
@@ -25,10 +26,20 @@ static int g_selectedMenuTab = MENU_TAB_MAP;
 static int g_menuScrollOffsets[MENU_TAB_COUNT] = {0};
 static const char *g_menuTabNames[MENU_TAB_COUNT] = {"Map", "Monsters", "Debug", "Automation", "Hotkeys"};
 
+static DWORD *g_MenuMonsterColorTarget = nullptr;
+static BYTE g_MenuMonsterColorPickerHover = (BYTE)BH_AUTOMAP_MONSTER_COLOR_NORMAL;
+
 static const int MENU_VIEW_TOP = 90;
 static const int MENU_VIEW_BOTTOM = 570;
 static const int MENU_WIDTH = 535;
 static const int MENU_HEIGHT = 580;
+
+static const int PICKER_FRAME_W = 180;
+static const int PICKER_FRAME_H = 220;
+static const int PICKER_GRID_OFF_X = 11;
+static const int PICKER_GRID_OFF_Y = 10;
+static const int PICKER_CLICK_OFF_Y_TOP = 25;
+static const int PICKER_CLICK_OFF_Y_BOT = 205;
 
 static int GetMenuLeft()
 {
@@ -38,6 +49,106 @@ static int GetMenuLeft()
 static int GetMenuTop()
 {
     return max(0, ((INT)*p_D2CLIENT_ScreenSizeY - MENU_HEIGHT) / 2);
+}
+
+static void GetMonsterColorPickerFrame(int *outFx, int *outFy)
+{
+    int ml = GetMenuLeft();
+    int mt = GetMenuTop();
+    int sw = (int)*p_D2CLIENT_ScreenSizeX;
+    int sh = (int)*p_D2CLIENT_ScreenSizeY;
+
+    int rightX = ml + MENU_WIDTH + 12;
+    int leftX = ml - PICKER_FRAME_W - 12;
+    int fx;
+    if (rightX + PICKER_FRAME_W <= sw - 4)
+        fx = rightX;
+    else if (leftX >= 4)
+        fx = leftX;
+    else
+        fx = max(4, min(ml + MENU_WIDTH - PICKER_FRAME_W - 8, sw - PICKER_FRAME_W - 4));
+
+    int fy = mt + 72;
+    if (fy + PICKER_FRAME_H > sh - 4)
+        fy = max(4, sh - PICKER_FRAME_H - 4);
+
+    *outFx = fx;
+    *outFy = fy;
+}
+
+static BYTE MenuGetPaletteHoverColor(int mX, int mY, int frameX, int frameY)
+{
+    int col = 1;
+    int baseX = frameX + PICKER_GRID_OFF_X;
+    int baseY = frameY + PICKER_GRID_OFF_Y;
+    for (int n = 1, row = 1; n <= 255; n++, row++)
+    {
+        if (row == 16)
+        {
+            col++;
+            row = 0;
+        }
+        int boxX1 = baseX + (row * 10);
+        int boxX2 = baseX + 10 + (row * 10);
+        int boxY1 = baseY + (col * 10);
+        int boxY2 = baseY + 10 + (col * 10);
+        if (mX >= boxX1 && mY >= boxY1 && mX <= boxX2 && mY <= boxY2)
+            return (BYTE)n;
+    }
+    return 0;
+}
+
+static void DrawMonsterColorPickerOverlay()
+{
+    if (!g_MenuMonsterColorTarget || !V_MainMenuOpen)
+        return;
+
+    int fx, fy;
+    GetMonsterColorPickerFrame(&fx, &fy);
+
+    int mX = (int)*p_D2CLIENT_MouseX;
+    int mY = (int)*p_D2CLIENT_MouseY;
+
+    BYTE hover = MenuGetPaletteHoverColor(mX, mY, fx, fy);
+    if (hover >= 1)
+        g_MenuMonsterColorPickerHover = hover;
+
+    DWORD currentId = 0;
+    if (g_MenuMonsterColorTarget)
+        currentId = *g_MenuMonsterColorTarget & 0xFFu;
+
+    D2GFX_DrawRectangle((DWORD)fx - 2, (DWORD)fy - 2, (DWORD)(fx + PICKER_FRAME_W + 2), (DWORD)(fy + PICKER_FRAME_H + 2), 0, 1);
+
+    DrawBox(fx, fy, fx + PICKER_FRAME_W, fy + PICKER_FRAME_H, COLOR_WHITE);
+    DrawTextB(fx + 50, fy + 6, FONTCOLOR_WHITE, 6, -1, "%s", "Choose Color");
+
+    int col = 1;
+    int baseX = fx + PICKER_GRID_OFF_X;
+    int baseY = fy + PICKER_GRID_OFF_Y;
+    for (int n = 1, row = 1; n <= 255; n++, row++)
+    {
+        if (row == 16)
+        {
+            col++;
+            row = 0;
+        }
+        int boxX1 = baseX + (row * 10);
+        int boxX2 = baseX + 10 + (row * 10);
+        int boxY1 = baseY + (col * 10);
+        int boxY2 = baseY + 10 + (col * 10);
+        D2GFX_DrawRectangle(boxX1, boxY1, boxX2, boxY2, (DWORD)n, 5);
+    }
+
+    DrawCross(fx + 147, fy + 200, (DWORD)g_MenuMonsterColorPickerHover);
+
+    if (hover >= 1)
+        DrawTextB(fx + 10, fy + 166, FONTCOLOR_GOLD, 6, -1, "Hover ID: %u (0x%02X)", (unsigned)hover, (unsigned)hover);
+    else
+        DrawTextB(fx + 10, fy + 166, FONTCOLOR_LIGHTGREY, 6, -1, "%s", "Hover ID: ---");
+    DrawTextB(fx + 10, fy + 178, FONTCOLOR_WHITE, 6, -1, "Saved ID: %u (0x%02X)", (unsigned)currentId, (unsigned)currentId);
+
+    DrawTextB(fx + 10, fy + 192, FONTCOLOR_WHITE, 6, -1, "%s", "Right Click - Close");
+    DrawTextB(fx + 10, fy + 208, FONTCOLOR_WHITE, 6, -1, "%s", "Left Click - Select");
 }
 
 // Forward declarations for callback functions
@@ -110,26 +221,77 @@ bool IsMonsterMarkerFontSlider(MenuItem &item)
     return item.intValue == &V_MonsterMarkerFontSize;
 }
 
+bool IsMonsterTextOffsetSlider(MenuItem &item)
+{
+    return item.intValue == &V_MonsterResistTextOffsetX ||
+           item.intValue == &V_MonsterResistTextOffsetY;
+}
+
+bool IsListedBossNameFontSlider(MenuItem &item)
+{
+    return item.intValue == &V_ListedBossNameColor;
+}
+
 void AddMonsterMarkerMenuItems(std::vector<MenuItem> &column)
 {
     MenuItem item;
 
     item = MenuItem();
-    item.label = "All Monster Style";
-    item.type = IntSlider;
-    item.intValue = &V_MonsterMarkerStyle;
-    item.intMin = MONSTER_MARKER_STYLE_CROSS;
-    item.intMax = MONSTER_MARKER_STYLE_X;
+    item.label = "Normal Color";
+    item.type = ColorPick;
+    item.intValue = &V_MonsterNormalColor;
+    item.intMin = 1;
+    item.intMax = 255;
     item.indent = 1;
     item.parentIndex = -1;
     column.push_back(item);
 
     item = MenuItem();
-    item.label = "All Monster Font ID";
+    item.label = "Minion Color";
+    item.type = ColorPick;
+    item.intValue = &V_MonsterMinionColor;
+    item.intMin = 1;
+    item.intMax = 255;
+    item.indent = 1;
+    item.parentIndex = -1;
+    column.push_back(item);
+
+    item = MenuItem();
+    item.label = "Champion Color";
+    item.type = ColorPick;
+    item.intValue = &V_MonsterChampionColor;
+    item.intMin = 1;
+    item.intMax = 255;
+    item.indent = 1;
+    item.parentIndex = -1;
+    column.push_back(item);
+
+    item = MenuItem();
+    item.label = "Boss Color";
+    item.type = ColorPick;
+    item.intValue = &V_MonsterBossColor;
+    item.intMin = 1;
+    item.intMax = 255;
+    item.indent = 1;
+    item.parentIndex = -1;
+    column.push_back(item);
+
+    item = MenuItem();
+    item.label = "Resist X Offset";
     item.type = IntSlider;
-    item.intValue = &V_MonsterMarkerFontSize;
+    item.intValue = &V_MonsterResistTextOffsetX;
     item.intMin = 0;
-    item.intMax = 15;
+    item.intMax = 20;
+    item.indent = 1;
+    item.parentIndex = -1;
+    column.push_back(item);
+
+    item = MenuItem();
+    item.label = "Resist Y Offset";
+    item.type = IntSlider;
+    item.intValue = &V_MonsterResistTextOffsetY;
+    item.intMin = 0;
+    item.intMax = 20;
     item.indent = 1;
     item.parentIndex = -1;
     column.push_back(item);
@@ -171,10 +333,21 @@ void BuildMenuTabs()
 
     AddMenuRange(g_menuMonsters, g_menuColumn1, 5, 11);
     AddMenuItemByLabel(g_menuMonsters, g_menuColumn3, "Monster Icons");
-    AddMenuItemByLabel(g_menuMonsters, g_menuColumn3, "All Monster Style");
-    AddMenuItemByLabel(g_menuMonsters, g_menuColumn3, "All Monster Font ID");
+    AddMenuItemByLabel(g_menuMonsters, g_menuColumn3, "Normal Color");
+    AddMenuItemByLabel(g_menuMonsters, g_menuColumn3, "Minion Color");
+    AddMenuItemByLabel(g_menuMonsters, g_menuColumn3, "Champion Color");
+    AddMenuItemByLabel(g_menuMonsters, g_menuColumn3, "Boss Color");
+    AddMenuItemByLabel(g_menuMonsters, g_menuColumn3, "Resist X Offset");
+    AddMenuItemByLabel(g_menuMonsters, g_menuColumn3, "Resist Y Offset");
+    AddMenuItemByLabel(g_menuMonsters, g_menuColumn3, "Monster Resists");
+    AddMenuItemByLabel(g_menuMonsters, g_menuColumn3, "Monster Enchants");
     AddMenuItemByLabel(g_menuMonsters, g_menuColumn3, "Monster HP Percent");
     AddMenuItemByLabel(g_menuMonsters, g_menuColumn3, "Monster Class IDs");
+    AddMenuItemByLabel(g_menuMonsters, g_menuColumn3, "Listed bosses (txt)");
+    AddMenuItemByLabel(g_menuMonsters, g_menuColumn3, "Show txt-listed bosses");
+    AddMenuItemByLabel(g_menuMonsters, g_menuColumn3, "Listed boss cross (txt)");
+    AddMenuItemByLabel(g_menuMonsters, g_menuColumn3, "Listed boss name (font #)");
+    AddMenuItemByLabel(g_menuMonsters, g_menuColumn3, "Listed boss HP in name");
 
     AddMenuItemByLabel(g_menuDebug, g_menuColumn3, "Debug Drawing");
     AddMenuItemByLabel(g_menuDebug, g_menuColumn3, "Mouse / Player Coords");
@@ -596,6 +769,22 @@ void InitMenu()
     AddMonsterMarkerMenuItems(g_menuColumn3);
 
     item = MenuItem();
+    item.label = "Monster Resists";
+    item.type = Checkbox;
+    item.boolValue = &V_DrawMonsterResistances;
+    item.indent = 1;
+    item.parentIndex = -1;
+    g_menuColumn3.push_back(item);
+
+    item = MenuItem();
+    item.label = "Monster Enchants";
+    item.type = Checkbox;
+    item.boolValue = &V_DrawMonsterEnchantments;
+    item.indent = 1;
+    item.parentIndex = -1;
+    g_menuColumn3.push_back(item);
+
+    item = MenuItem();
     item.label = "Monster HP Percent";
     item.type = Checkbox;
     item.boolValue = &V_DrawMonsterHealthPercent;
@@ -607,6 +796,49 @@ void InitMenu()
     item.label = "Monster Class IDs";
     item.type = Checkbox;
     item.boolValue = &V_DrawMonsterClassIds;
+    item.indent = 1;
+    item.parentIndex = -1;
+    g_menuColumn3.push_back(item);
+
+    item = MenuItem();
+    item.label = "Listed bosses (txt)";
+    item.type = Label;
+    item.indent = 0;
+    item.parentIndex = -1;
+    g_menuColumn3.push_back(item);
+
+    item = MenuItem();
+    item.label = "Show txt-listed bosses";
+    item.type = Checkbox;
+    item.boolValue = &V_DrawListedBossMarkers;
+    item.indent = 1;
+    item.parentIndex = -1;
+    g_menuColumn3.push_back(item);
+
+    item = MenuItem();
+    item.label = "Listed boss cross (txt)";
+    item.type = ColorPick;
+    item.intValue = &V_ListedBossCrossColor;
+    item.intMin = 1;
+    item.intMax = 255;
+    item.indent = 1;
+    item.parentIndex = -1;
+    g_menuColumn3.push_back(item);
+
+    item = MenuItem();
+    item.label = "Listed boss name (font #)";
+    item.type = IntSlider;
+    item.intValue = &V_ListedBossNameColor;
+    item.intMin = 0;
+    item.intMax = FONTCOLOR_RED;
+    item.indent = 1;
+    item.parentIndex = -1;
+    g_menuColumn3.push_back(item);
+
+    item = MenuItem();
+    item.label = "Listed boss HP in name";
+    item.type = Checkbox;
+    item.boolValue = &V_ListedBossHpInName;
     item.indent = 1;
     item.parentIndex = -1;
     g_menuColumn3.push_back(item);
@@ -808,6 +1040,18 @@ void DrawMenuColumn(std::vector<MenuItem> &column, int base_x, int &currentY, in
                     DrawTextB(item.x + 20, item.y + 15, FONTCOLOR_WHITE, 6, -1, "%s: %d", (LPSTR)item.label, *item.intValue);
                     DrawIncreaseDecrease(item.x + 130, item.y + 5, TRUE, COLOR_WHITE);
                 }
+                else if (IsMonsterTextOffsetSlider(item))
+                {
+                    DrawIncreaseDecrease(item.x, item.y + 5, FALSE, COLOR_WHITE);
+                    DrawTextB(item.x + 20, item.y + 15, FONTCOLOR_WHITE, 6, -1, "%s: %+d", (LPSTR)item.label, (INT)*item.intValue - 10);
+                    DrawIncreaseDecrease(item.x + 130, item.y + 5, TRUE, COLOR_WHITE);
+                }
+                else if (IsListedBossNameFontSlider(item))
+                {
+                    DrawIncreaseDecrease(item.x, item.y + 5, FALSE, COLOR_WHITE);
+                    DrawTextB(item.x + 20, item.y + 15, FONTCOLOR_WHITE, 6, -1, "%s: %d", (LPSTR)item.label, *item.intValue);
+                    DrawIncreaseDecrease(item.x + 100, item.y + 5, TRUE, COLOR_WHITE);
+                }
                 else if (item.label == "Slot 1" || item.label == "Slot 2" || item.label == "Slot 3" || item.label == "Slot 4")
                 {
                     const int decrease_button_x = item.x + 50;
@@ -831,6 +1075,13 @@ void DrawMenuColumn(std::vector<MenuItem> &column, int base_x, int &currentY, in
                     DrawTextB(item.x + 20, item.y + 15, FONTCOLOR_WHITE, 6, -1, "%s: %d%%", (LPSTR)item.label, *item.intValue);
                     DrawIncreaseDecrease(item.x + 100, item.y + 5, TRUE, COLOR_WHITE);
                 }
+                break;
+            case ColorPick:
+                DrawBox(item.x - 3, item.y - 4, item.x + 248, item.y + 22, FONTCOLOR_GOLD);
+                DrawCross(item.x, item.y + 4, *item.intValue);
+                DrawTextB(item.x + 13, item.y + 10, FONTCOLOR_WHITE, 6, -1, "%s", (LPSTR)item.label);
+                DrawTextB(item.x + 140, item.y + 10, FONTCOLOR_GOLD, 6, -1, "id:%u", (unsigned)(*item.intValue & 0xFFu));
+                DrawTextB(item.x + 198, item.y + 10, FONTCOLOR_GOLD, 6, -1, "%s", "[palette]");
                 break;
             case Button:
             {
@@ -971,6 +1222,8 @@ void DrawMenu()
 
     if (g_menuScrollOffsets[g_selectedMenuTab] > 0)
         DrawTextB(menuLeft + MENU_WIDTH - 55, menuTop + MENU_VIEW_TOP - 5, FONTCOLOR_LIGHTGREY, 6, -1, "scroll: %d", g_menuScrollOffsets[g_selectedMenuTab]);
+
+    DrawMonsterColorPickerOverlay();
 }
 
 bool HandleMenuClickColumn(std::vector<MenuItem> &column, int mouseX, int mouseY)
@@ -988,9 +1241,27 @@ bool HandleMenuClickColumn(std::vector<MenuItem> &column, int mouseX, int mouseY
         {
         case Category:
         case Checkbox:
-            if (mouseX >= item.x && mouseX <= item.x + item.width && mouseY >= item.y && mouseY <= item.y + item.height)
+            // DrawCheckBox only draws a small square; label is to the right — use a wide row hit area.
             {
-                *item.boolValue = !(*item.boolValue);
+                const int clickW = 380;
+                const int clickH = 18;
+                if (mouseX >= item.x && mouseX <= item.x + clickW && mouseY >= item.y && mouseY <= item.y + clickH)
+                {
+                    *item.boolValue = !(*item.boolValue);
+                    clicked = true;
+                }
+            }
+            break;
+        case ColorPick:
+            if (mouseX >= item.x - 3 && mouseX <= item.x + 248 && mouseY >= item.y - 4 && mouseY <= item.y + 22)
+            {
+                g_MenuMonsterColorTarget = item.intValue;
+                DWORD c = *item.intValue;
+                if (c < 1)
+                    c = 1;
+                if (c > 255)
+                    c = 255;
+                g_MenuMonsterColorPickerHover = (BYTE)c;
                 clicked = true;
             }
             break;
@@ -1018,7 +1289,7 @@ bool HandleMenuClickColumn(std::vector<MenuItem> &column, int mouseX, int mouseY
                 int y_offset = isThresholdSlider ? 0 : 5;
                 int increase_button_x = isThresholdSlider ? item.x + 50 : item.x + 100;
 
-                if (IsMonsterMarkerStyleSlider(item) || IsMonsterMarkerFontSlider(item))
+                if (IsMonsterMarkerStyleSlider(item) || IsMonsterMarkerFontSlider(item) || IsMonsterTextOffsetSlider(item))
                     increase_button_x = item.x + 130;
 
                 int step = 1;
@@ -1092,8 +1363,51 @@ bool HandleMenuClick(int mouseX, int mouseY)
     if (!V_MainMenuOpen)
         return false;
 
+    if (g_MenuMonsterColorTarget)
+    {
+        int fx, fy;
+        GetMonsterColorPickerFrame(&fx, &fy);
+        if (mouseX >= fx && mouseX <= fx + PICKER_FRAME_W && mouseY >= fy + PICKER_CLICK_OFF_Y_TOP && mouseY <= fy + PICKER_CLICK_OFF_Y_BOT)
+        {
+            BYTE pick = MenuGetPaletteHoverColor(mouseX, mouseY, fx, fy);
+            if (pick >= 1)
+                *g_MenuMonsterColorTarget = pick;
+            else if (g_MenuMonsterColorPickerHover >= 1)
+                *g_MenuMonsterColorTarget = g_MenuMonsterColorPickerHover;
+            SaveSettings();
+        }
+        g_MenuMonsterColorTarget = nullptr;
+        return true;
+    }
+
     if (HandleMenuTabClick(mouseX, mouseY))
         return true;
 
-    return HandleMenuClickColumn(GetSelectedMenuItems(), mouseX, mouseY);
+    if (HandleMenuClickColumn(GetSelectedMenuItems(), mouseX, mouseY))
+    {
+        SaveSettings();
+        return true;
+    }
+    return false;
+}
+
+bool HandleMenuRightClick(int mouseX, int mouseY)
+{
+    (void)mouseX;
+    (void)mouseY;
+    if (!V_MainMenuOpen)
+        return false;
+
+    if (g_MenuMonsterColorTarget)
+    {
+        g_MenuMonsterColorTarget = nullptr;
+        return true;
+    }
+
+    return false;
+}
+
+void ResetMenuMonsterColorPicker()
+{
+    g_MenuMonsterColorTarget = nullptr;
 }

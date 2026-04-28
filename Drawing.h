@@ -23,11 +23,12 @@
 
 #define COLOR_WHITE 255
 
-#define CROSSCOLOR_ACTUAL_BOSS 155
-#define CROSSCOLOR_BOSS 109
-#define CROSSCOLOR_CHAMP 151
-#define CROSSCOLOR_MINION 101
-#define CROSSCOLOR_NORMAL 8
+// Automap monster marker palette indices — defaults from slashdiablo BH Maphack.cpp (monsterColors map).
+#define BH_AUTOMAP_MONSTER_COLOR_NORMAL 0x5B
+#define BH_AUTOMAP_MONSTER_COLOR_MINION 0x60
+#define BH_AUTOMAP_MONSTER_COLOR_CHAMPION 0x91
+#define BH_AUTOMAP_MONSTER_COLOR_BOSS 0x84
+
 #define CROSSCOLOR_SHRINE 31
 #define CROSSCOLOR_IMPORTANT 132
 

@@ -1,3 +1,4 @@
 #pragma once
+
 bool LoadSettings();
-bool SaveSettings(); 
+bool SaveSettings();
