@@ -696,7 +696,7 @@ BOOL IsValidMonster(LPUNITANY Unit)
 	if (Unit->dwMode == NPC_MODE_DEATH || Unit->dwMode == NPC_MODE_DEAD)
 		return FALSE;
 
-	if (Unit->dwTxtFileNo >= 110 && Unit->dwTxtFileNo <= 113 || Unit->dwTxtFileNo == 608 && Unit->dwMode == NPC_MODE_USESKILL1)
+	if (Unit->dwTxtFileNo == 608 && Unit->dwMode == NPC_MODE_USESKILL1)
 		return FALSE;
 
 	if (Unit->dwTxtFileNo == 68 && Unit->dwMode == NPC_MODE_SEQUENCE)

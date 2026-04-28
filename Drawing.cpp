@@ -40,22 +40,32 @@ VOID DrawCross(INT X, INT Y, DWORD Color)
 		D2GFX_DrawLine(Position.x + Lines[i][0], Position.y + Lines[i][1], Position.x + Lines[i + 1][0], Position.y + Lines[i + 1][1], Color, -1);
 }
 
-static VOID DrawXMarker(INT X, INT Y, DWORD Color, DWORD Size)
+static DWORD GetMarkerTextColor(DWORD Color)
 {
-	INT markerSize = (INT)Size;
-
-	if (markerSize < 2)
-		markerSize = 2;
-	else if (markerSize > 15)
-		markerSize = 15;
-
-	INT halfSize = markerSize / 2;
-
-	D2GFX_DrawLine(X - halfSize, Y - halfSize, X + halfSize, Y + halfSize, Color, -1);
-	D2GFX_DrawLine(X + halfSize, Y - halfSize, X - halfSize, Y + halfSize, Color, -1);
+	switch (Color)
+	{
+	case CROSSCOLOR_ACTUAL_BOSS:
+		return FONTCOLOR_PINK;
+	case CROSSCOLOR_BOSS:
+		return FONTCOLOR_ORANGE;
+	case CROSSCOLOR_CHAMP:
+		return FONTCOLOR_BLUE;
+	case CROSSCOLOR_MINION:
+		return FONTCOLOR_YELLOW;
+	case CROSSCOLOR_IMPORTANT:
+		return FONTCOLOR_LIGHTGREEN;
+	case CROSSCOLOR_NORMAL:
+	default:
+		return FONTCOLOR_DARKORANGE;
+	}
 }
 
-static VOID DrawMonsterMarker(INT X, INT Y, DWORD Color, DWORD Style, DWORD Size)
+static VOID DrawTextMarker(INT X, INT Y, DWORD Color, DWORD Font)
+{
+	DrawTextB(X, Y + 4, GetMarkerTextColor(Color), Font, 1, "x");
+}
+
+static VOID DrawMonsterMarker(INT X, INT Y, DWORD Color, DWORD Style, DWORD Font)
 {
 	if (Style == MONSTER_MARKER_STYLE_CROSS)
 	{
@@ -64,7 +74,7 @@ static VOID DrawMonsterMarker(INT X, INT Y, DWORD Color, DWORD Style, DWORD Size
 		return;
 	}
 
-	DrawXMarker(X, Y, Color, Size);
+	DrawTextMarker(X, Y, Color, Font);
 }
 
 static BOOL IsOwnedByPlayer(LPUNITANY Unit)
@@ -88,7 +98,9 @@ static POINT GetPlayerAutomapPosition()
 
 static VOID DrawLineFromPlayerToAutomapPoint(POINT playerPos, POINT targetPos, DWORD Color)
 {
-	targetPos = AdjustAutomapLabelPosition(targetPos);
+	if (!V_DrawPOILinesToTarget)
+		targetPos = AdjustAutomapLabelPosition(targetPos);
+
 	D2GFX_DrawLine(playerPos.x, playerPos.y, targetPos.x, targetPos.y, Color, -1);
 }
 
@@ -106,6 +118,14 @@ static DWORD GetExitLineColor(LPCAVEDESC exitInfo, DWORD currentZone)
 static DWORD GetTrackedPresetLineColor(PRESETUNITINFO &unitInfo)
 {
 	return !strcmp(unitInfo.szName, "Waypoint") ? 0x7D : 0xA8;
+}
+
+static POINT GetExitLineWorldPosition(LPCAVEDESC exitInfo)
+{
+	if (exitInfo && (exitInfo->ptTargetPos.x || exitInfo->ptTargetPos.y))
+		return exitInfo->ptTargetPos;
+
+	return exitInfo->ptPos;
 }
 
 VOID DrawBox(INT X1, INT Y1, INT X2, INT Y2, INT LineColor)
@@ -132,7 +152,7 @@ VOID DrawCheckBox(INT X, INT Y, INT Size, INT FontSize, BOOL Checked, DWORD BoxC
 	vsprintf_s(szBuffer, sizeof(szBuffer), Text, Args);
 	va_end(Args);
 
-	DrawTextB(X + Size * 1.5, Y + Size, TextColor, FontSize, -1, szBuffer);
+	DrawTextB(X + Size * 1.5, Y + Size, TextColor, FontSize, -1, "%s", szBuffer);
 }
 
 VOID DrawIncreaseDecrease(INT X, INT Y, BOOL Increase, DWORD BoxColor)
@@ -173,9 +193,11 @@ VOID DrawTrackedEntitiesLabels()
 		{
 			LPCAVEDESC pExitInfo = V_Reveal->m_LevelExits[i];
 			POINT initialPos = {pExitInfo->ptPos.x, pExitInfo->ptPos.y};
+			POINT linePos = GetExitLineWorldPosition(pExitInfo);
 
+			ScreenToAutomap(&linePos, linePos.x * 32, linePos.y * 32);
+			DrawLineFromPlayerToAutomapPoint(playerPos, linePos, GetExitLineColor(pExitInfo, CurrentZone));
 			ScreenToAutomap(&initialPos, pExitInfo->ptPos.x * 32, pExitInfo->ptPos.y * 32);
-			DrawLineFromPlayerToAutomapPoint(playerPos, initialPos, GetExitLineColor(pExitInfo, CurrentZone));
 			initialPos = AdjustAutomapLabelPosition(initialPos);
 
 			DWORD textWidth = GetTextWidth(pExitInfo->szName, FONT_SIZE);
@@ -539,42 +561,42 @@ VOID DrawNearbyEntities()
 	for (size_t i = 0; i < normalMonsters.size(); i++)
 	{
 		DrawMonsterMarker(normalMonsters[i].DrawingPos.x, normalMonsters[i].DrawingPos.y, normalMonsters[i].Color,
-						  V_NormalMonsterMarkerStyle, V_NormalMonsterMarkerFontSize);
+						  V_MonsterMarkerStyle, V_MonsterMarkerFontSize);
 	}
 
 	// 3. Magic / champion monsters
 	for (size_t i = 0; i < championMonsters.size(); i++)
 	{
 		DrawMonsterMarker(championMonsters[i].DrawingPos.x, championMonsters[i].DrawingPos.y, championMonsters[i].Color,
-						  V_ChampionMonsterMarkerStyle, V_ChampionMonsterMarkerFontSize);
+						  V_MonsterMarkerStyle, V_MonsterMarkerFontSize);
 	}
 
 	// 4. Rare / minion monsters
 	for (size_t i = 0; i < minionMonsters.size(); i++)
 	{
 		DrawMonsterMarker(minionMonsters[i].DrawingPos.x, minionMonsters[i].DrawingPos.y, minionMonsters[i].Color,
-						  V_MinionMonsterMarkerStyle, V_MinionMonsterMarkerFontSize);
+						  V_MonsterMarkerStyle, V_MonsterMarkerFontSize);
 	}
 
 	// 5. Unique / boss monsters
 	for (size_t i = 0; i < bossMonsters.size(); i++)
 	{
 		DrawMonsterMarker(bossMonsters[i].DrawingPos.x, bossMonsters[i].DrawingPos.y, bossMonsters[i].Color,
-						  V_BossMonsterMarkerStyle, V_BossMonsterMarkerFontSize);
+						  V_MonsterMarkerStyle, V_MonsterMarkerFontSize);
 	}
 
 	// 6. Important monsters
 	for (size_t i = 0; i < interestingMonsters.size(); i++)
 	{
 		DrawMonsterMarker(interestingMonsters[i].DrawingPos.x, interestingMonsters[i].DrawingPos.y, interestingMonsters[i].Color,
-						  V_ImportantMonsterMarkerStyle, V_ImportantMonsterMarkerFontSize);
+						  V_MonsterMarkerStyle, V_MonsterMarkerFontSize);
 	}
 
 	// 7. Actual boss monsters
 	for (size_t i = 0; i < actualBossMonsters.size(); i++)
 	{
 		DrawMonsterMarker(actualBossMonsters[i].DrawingPos.x, actualBossMonsters[i].DrawingPos.y, actualBossMonsters[i].Color,
-						  V_ActualBossMonsterMarkerStyle, V_ActualBossMonsterMarkerFontSize);
+						  V_MonsterMarkerStyle, V_MonsterMarkerFontSize);
 	}
 
 	// 8. Object labels
@@ -600,5 +622,59 @@ VOID DrawNearbyEntities()
 	for (size_t i = 0; i < actualBossMonsters.size(); i++)
 	{
 		DrawTextB(actualBossMonsters[i].DrawingPos.x, actualBossMonsters[i].DrawingPos.y - 8, FONTCOLOR_PINK, FONT_SIZE, 1, actualBossMonsters[i].Name);
+	}
+}
+
+VOID DrawMonsterHealthPercent()
+{
+	if (!V_DrawMonsterHealthPercent || IsFullScreenPanelOpen() || V_MainMenuOpen || !Me || !Me->pAct)
+		return;
+
+	for (LPROOM1 Room = Me->pAct->pRoom1; Room; Room = Room->pRoomNext)
+	{
+		for (LPUNITANY Unit = Room->pUnitFirst; Unit; Unit = Unit->pListNext)
+		{
+			if (!Unit || Unit->dwType != UNIT_TYPE_NPC || !Unit->pPath || !Unit->pMonsterData)
+				continue;
+
+			if (!IsValidMonster(Unit) || IsOwnedByPlayer(Unit) || IsMercClassId(Unit->dwTxtFileNo))
+				continue;
+
+			if (!V_DrawNormalMonsters && !(Unit->pMonsterData->fBoss || Unit->pMonsterData->fChamp || Unit->pMonsterData->fMinion))
+				continue;
+
+			if (!V_DrawChampBossMonsters && (Unit->pMonsterData->fBoss || Unit->pMonsterData->fChamp || Unit->pMonsterData->fMinion))
+				continue;
+
+			DWORD lifePercent = GetUnitLifePercent(Unit);
+			if (lifePercent > 100)
+				continue;
+
+			POINT screenPos = {D2CLIENT_GetUnitX(Unit), D2CLIENT_GetUnitY(Unit)};
+			WorldToScreen(&screenPos);
+			DrawTextB(screenPos.x, screenPos.y - 25, FONTCOLOR_WHITE, 6, 1, "%d%%", lifePercent);
+		}
+	}
+}
+
+VOID DrawMonsterClassIds()
+{
+	if (!V_DrawMonsterClassIds || IsFullScreenPanelOpen() || V_MainMenuOpen || !Me || !Me->pAct)
+		return;
+
+	for (LPROOM1 Room = Me->pAct->pRoom1; Room; Room = Room->pRoomNext)
+	{
+		for (LPUNITANY Unit = Room->pUnitFirst; Unit; Unit = Unit->pListNext)
+		{
+			if (!Unit || Unit->dwType != UNIT_TYPE_NPC || !Unit->pPath || !Unit->pMonsterData)
+				continue;
+
+			if (!IsValidMonster(Unit) || IsOwnedByPlayer(Unit) || IsMercClassId(Unit->dwTxtFileNo))
+				continue;
+
+			POINT screenPos = {D2CLIENT_GetUnitX(Unit), D2CLIENT_GetUnitY(Unit)};
+			WorldToScreen(&screenPos);
+			DrawTextB(screenPos.x, screenPos.y - 38, FONTCOLOR_GOLD, 6, 1, "txt:%d", Unit->dwTxtFileNo);
+		}
 	}
 }

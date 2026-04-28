@@ -199,12 +199,18 @@ VOID MainLoop()
         SetDefaultMenuVars();
     }
 
-    // DrawMouseCoordinates();
-    // DrawNearestItem();
-    // DrawPlayerInventoryItems();
-    // DrawPlayerBeltItems();
-    // DrawClosestMonsterStats();
-    // DrawCurrentRoomInfo();
+    if (V_DebugMouseCoordinates)
+        DrawMouseCoordinates();
+    if (V_DebugNearestItem)
+        DrawNearestItem();
+    if (V_DebugPlayerInventory)
+        DrawPlayerInventoryItems();
+    if (V_DebugPlayerBelt)
+        DrawPlayerBeltItems();
+    if (V_DebugClosestMonster)
+        DrawClosestMonsterStats();
+    if (V_DebugCurrentRoom)
+        DrawCurrentRoomInfo();
 
     AutoPotExitMain();
     RefillPotions();
@@ -221,6 +227,8 @@ VOID MainLoop()
     DrawMartialArtsCharges();
 
     DrawNearbyEntities();
+    DrawMonsterHealthPercent();
+    DrawMonsterClassIds();
     DrawTownPortalOwnerLabels();
     DrawTrackedEntitiesLabels();
 

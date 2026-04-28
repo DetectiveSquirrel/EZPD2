@@ -165,6 +165,8 @@ VOID Reveal::RevealRoom1(LPROOM2 pRoom)
 				sprintf_s(LevelDesc->szName, sizeof(LevelDesc->szName), "%s", szLevel);
 				LevelDesc->ptPos.x = unitWorldX - (8 << 1);
 				LevelDesc->ptPos.y = unitWorldY - 10;
+				LevelDesc->ptTargetPos.x = unitWorldX;
+				LevelDesc->ptTargetPos.y = unitWorldY;
 				LevelDesc->dwAct = Me->pAct->dwAct;
 				LevelDesc->dwLevelNo = pRoom->pLevel->dwLevelNo;
 				LevelDesc->dwTargetLevelNo = dwTargetLevel;
@@ -1002,6 +1004,8 @@ VOID Reveal::AddBoundaryLevelExits()
 							sprintf_s(LevelDesc->szName, sizeof(LevelDesc->szName), "%s", szLevelName);
 							LevelDesc->ptPos.x = worldPos.x - (8 << 1);
 							LevelDesc->ptPos.y = worldPos.y - 10;
+							LevelDesc->ptTargetPos.x = worldPos.x;
+							LevelDesc->ptTargetPos.y = worldPos.y;
 							LevelDesc->dwAct = Me->pAct->dwAct;
 							LevelDesc->dwLevelNo = pCurrentLevel->dwLevelNo;
 							LevelDesc->dwTargetLevelNo = dwTargetLevel;

@@ -63,4 +63,6 @@ VOID DrawCheckBox(INT X, INT Y, INT Size, INT FontSize, BOOL Checked, DWORD BoxC
 VOID DrawIncreaseDecrease(INT X, INT Y, BOOL Increase, DWORD BoxColor);
 VOID DrawTrackedEntitiesLabels();
 VOID DrawNearbyEntities();
+VOID DrawMonsterHealthPercent();
+VOID DrawMonsterClassIds();
 #endif

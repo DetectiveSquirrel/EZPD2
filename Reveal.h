@@ -19,6 +19,7 @@ typedef struct CaveDescriptor_t
 {
 	CHAR szName[0x40];
 	POINT ptPos;
+	POINT ptTargetPos;
 	DWORD dwLevelNo;
 	DWORD dwTargetLevelNo;
 	DWORD dwAct;

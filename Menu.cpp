@@ -68,32 +68,22 @@ const char *GetMonsterMarkerStyleName(DWORD style)
 
 bool IsMonsterMarkerStyleSlider(MenuItem &item)
 {
-    return item.intValue == &V_NormalMonsterMarkerStyle ||
-           item.intValue == &V_MinionMonsterMarkerStyle ||
-           item.intValue == &V_ChampionMonsterMarkerStyle ||
-           item.intValue == &V_BossMonsterMarkerStyle ||
-           item.intValue == &V_ImportantMonsterMarkerStyle ||
-           item.intValue == &V_ActualBossMonsterMarkerStyle;
+    return item.intValue == &V_MonsterMarkerStyle;
 }
 
 bool IsMonsterMarkerFontSlider(MenuItem &item)
 {
-    return item.intValue == &V_NormalMonsterMarkerFontSize ||
-           item.intValue == &V_MinionMonsterMarkerFontSize ||
-           item.intValue == &V_ChampionMonsterMarkerFontSize ||
-           item.intValue == &V_BossMonsterMarkerFontSize ||
-           item.intValue == &V_ImportantMonsterMarkerFontSize ||
-           item.intValue == &V_ActualBossMonsterMarkerFontSize;
+    return item.intValue == &V_MonsterMarkerFontSize;
 }
 
-void AddMonsterMarkerMenuItems(std::vector<MenuItem> &column, const char *styleLabel, const char *fontLabel, DWORD *styleValue, DWORD *fontValue)
+void AddMonsterMarkerMenuItems(std::vector<MenuItem> &column)
 {
     MenuItem item;
 
     item = MenuItem();
-    item.label = styleLabel;
+    item.label = "All Monster Style";
     item.type = IntSlider;
-    item.intValue = styleValue;
+    item.intValue = &V_MonsterMarkerStyle;
     item.intMin = MONSTER_MARKER_STYLE_CROSS;
     item.intMax = MONSTER_MARKER_STYLE_X;
     item.indent = 1;
@@ -101,9 +91,9 @@ void AddMonsterMarkerMenuItems(std::vector<MenuItem> &column, const char *styleL
     column.push_back(item);
 
     item = MenuItem();
-    item.label = fontLabel;
+    item.label = "All Monster Font ID";
     item.type = IntSlider;
-    item.intValue = fontValue;
+    item.intValue = &V_MonsterMarkerFontSize;
     item.intMin = 0;
     item.intMax = 15;
     item.indent = 1;
@@ -149,6 +139,14 @@ void InitMenu()
     item.label = "Preloads (Waypoints, Quest Objects, etc.)";
     item.type = Checkbox;
     item.boolValue = &V_ShowPreloads;
+    item.indent = 1;
+    item.parentIndex = mapHackParent;
+    g_menuColumn1.push_back(item);
+
+    item = MenuItem();
+    item.label = "POI Lines To Target";
+    item.type = Checkbox;
+    item.boolValue = &V_DrawPOILinesToTarget;
     item.indent = 1;
     item.parentIndex = mapHackParent;
     g_menuColumn1.push_back(item);
@@ -496,12 +494,78 @@ void InitMenu()
     item.parentIndex = -1;
     g_menuColumn3.push_back(item);
 
-    AddMonsterMarkerMenuItems(g_menuColumn3, "Normal Style", "Normal X Size", &V_NormalMonsterMarkerStyle, &V_NormalMonsterMarkerFontSize);
-    AddMonsterMarkerMenuItems(g_menuColumn3, "Magic Style", "Magic X Size", &V_ChampionMonsterMarkerStyle, &V_ChampionMonsterMarkerFontSize);
-    AddMonsterMarkerMenuItems(g_menuColumn3, "Rare Style", "Rare X Size", &V_MinionMonsterMarkerStyle, &V_MinionMonsterMarkerFontSize);
-    AddMonsterMarkerMenuItems(g_menuColumn3, "Unique Style", "Unique X Size", &V_BossMonsterMarkerStyle, &V_BossMonsterMarkerFontSize);
-    AddMonsterMarkerMenuItems(g_menuColumn3, "Important Style", "Important X Size", &V_ImportantMonsterMarkerStyle, &V_ImportantMonsterMarkerFontSize);
-    AddMonsterMarkerMenuItems(g_menuColumn3, "Actual Boss Style", "Actual Boss X Size", &V_ActualBossMonsterMarkerStyle, &V_ActualBossMonsterMarkerFontSize);
+    AddMonsterMarkerMenuItems(g_menuColumn3);
+
+    item = MenuItem();
+    item.label = "Monster HP Percent";
+    item.type = Checkbox;
+    item.boolValue = &V_DrawMonsterHealthPercent;
+    item.indent = 1;
+    item.parentIndex = -1;
+    g_menuColumn3.push_back(item);
+
+    item = MenuItem();
+    item.label = "Monster Class IDs";
+    item.type = Checkbox;
+    item.boolValue = &V_DrawMonsterClassIds;
+    item.indent = 1;
+    item.parentIndex = -1;
+    g_menuColumn3.push_back(item);
+
+    item = MenuItem();
+    item.label = "Debug Drawing";
+    item.type = Label;
+    item.indent = 0;
+    item.parentIndex = -1;
+    g_menuColumn3.push_back(item);
+
+    item = MenuItem();
+    item.label = "Mouse / Player Coords";
+    item.type = Checkbox;
+    item.boolValue = &V_DebugMouseCoordinates;
+    item.indent = 1;
+    item.parentIndex = -1;
+    g_menuColumn3.push_back(item);
+
+    item = MenuItem();
+    item.label = "Nearest Item";
+    item.type = Checkbox;
+    item.boolValue = &V_DebugNearestItem;
+    item.indent = 1;
+    item.parentIndex = -1;
+    g_menuColumn3.push_back(item);
+
+    item = MenuItem();
+    item.label = "Player Inventory";
+    item.type = Checkbox;
+    item.boolValue = &V_DebugPlayerInventory;
+    item.indent = 1;
+    item.parentIndex = -1;
+    g_menuColumn3.push_back(item);
+
+    item = MenuItem();
+    item.label = "Player Belt";
+    item.type = Checkbox;
+    item.boolValue = &V_DebugPlayerBelt;
+    item.indent = 1;
+    item.parentIndex = -1;
+    g_menuColumn3.push_back(item);
+
+    item = MenuItem();
+    item.label = "Closest Monster Stats";
+    item.type = Checkbox;
+    item.boolValue = &V_DebugClosestMonster;
+    item.indent = 1;
+    item.parentIndex = -1;
+    g_menuColumn3.push_back(item);
+
+    item = MenuItem();
+    item.label = "Current Room Info";
+    item.type = Checkbox;
+    item.boolValue = &V_DebugCurrentRoom;
+    item.indent = 1;
+    item.parentIndex = -1;
+    g_menuColumn3.push_back(item);
 
     item = MenuItem();
     item.label = "Vendor Shortcuts";
@@ -624,7 +688,7 @@ void DrawMenuColumn(std::vector<MenuItem> &column, int base_x, int &currentY)
         case Checkbox:
             item.width = 12;
             item.height = 12;
-            DrawCheckBox(item.x, item.y, item.width, 6, *item.boolValue, COLOR_WHITE, FONTCOLOR_WHITE, (LPSTR)item.label);
+            DrawCheckBox(item.x, item.y, item.width, 6, *item.boolValue, COLOR_WHITE, FONTCOLOR_WHITE, "%s", (LPSTR)item.label);
             break;
         case IntSlider:
             if (IsMonsterMarkerStyleSlider(item))
@@ -675,7 +739,7 @@ void DrawMenuColumn(std::vector<MenuItem> &column, int base_x, int &currentY)
                 valueX = item.x + 168;
             }
 
-            DrawTextB(textX, item.y, FONTCOLOR_WHITE, 6, -1, (LPSTR)item.label);
+            DrawTextB(textX, item.y, FONTCOLOR_WHITE, 6, -1, "%s", (LPSTR)item.label);
             if (item.callback == ToggleMenuKeyInput)
             {
                 DrawTextB(valueX, item.y, V_InputModeType == MODE_MENU_KEY ? FONTCOLOR_BLUE : FONTCOLOR_GOLD, 6, -1, "%s", GetKeyName(V_MainMenuKey));
@@ -715,7 +779,7 @@ void DrawMenuColumn(std::vector<MenuItem> &column, int base_x, int &currentY)
             break;
         }
         case Label:
-            DrawTextB(item.x, item.y, FONTCOLOR_GOLD, 8, -1, (LPSTR)item.label);
+            DrawTextB(item.x, item.y, FONTCOLOR_GOLD, 8, -1, "%s", (LPSTR)item.label);
             break;
         }
 
