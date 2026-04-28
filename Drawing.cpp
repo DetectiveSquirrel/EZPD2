@@ -40,6 +40,74 @@ VOID DrawCross(INT X, INT Y, DWORD Color)
 		D2GFX_DrawLine(Position.x + Lines[i][0], Position.y + Lines[i][1], Position.x + Lines[i + 1][0], Position.y + Lines[i + 1][1], Color, -1);
 }
 
+static VOID DrawXMarker(INT X, INT Y, DWORD Color, DWORD Size)
+{
+	INT markerSize = (INT)Size;
+
+	if (markerSize < 2)
+		markerSize = 2;
+	else if (markerSize > 15)
+		markerSize = 15;
+
+	INT halfSize = markerSize / 2;
+
+	D2GFX_DrawLine(X - halfSize, Y - halfSize, X + halfSize, Y + halfSize, Color, -1);
+	D2GFX_DrawLine(X + halfSize, Y - halfSize, X - halfSize, Y + halfSize, Color, -1);
+}
+
+static VOID DrawMonsterMarker(INT X, INT Y, DWORD Color, DWORD Style, DWORD Size)
+{
+	if (Style == MONSTER_MARKER_STYLE_CROSS)
+	{
+		DrawCross(X, Y, Color);
+
+		return;
+	}
+
+	DrawXMarker(X, Y, Color, Size);
+}
+
+static BOOL IsOwnedByPlayer(LPUNITANY Unit)
+{
+	if (!Unit || !Me)
+		return FALSE;
+
+	if (Unit->dwOwnerId == Me->dwUnitId)
+		return TRUE;
+
+	return D2CLIENT_GetMonsterOwner(Unit->dwUnitId) == Me->dwUnitId;
+}
+
+static POINT GetPlayerAutomapPosition()
+{
+	POINT playerPos = {D2CLIENT_GetUnitX(Me), D2CLIENT_GetUnitY(Me)};
+	ScreenToAutomap(&playerPos, playerPos.x * 32, playerPos.y * 32);
+
+	return playerPos;
+}
+
+static VOID DrawLineFromPlayerToAutomapPoint(POINT playerPos, POINT targetPos, DWORD Color)
+{
+	targetPos = AdjustAutomapLabelPosition(targetPos);
+	D2GFX_DrawLine(playerPos.x, playerPos.y, targetPos.x, targetPos.y, Color, -1);
+}
+
+static DWORD GetExitLineColor(LPCAVEDESC exitInfo, DWORD currentZone)
+{
+	if (!exitInfo)
+		return 0x99;
+
+	if (!strcmp(exitInfo->szName, "True Tomb"))
+		return 0x69;
+
+	return exitInfo->dwTargetLevelNo < currentZone ? 10 : 0x99;
+}
+
+static DWORD GetTrackedPresetLineColor(PRESETUNITINFO &unitInfo)
+{
+	return !strcmp(unitInfo.szName, "Waypoint") ? 0x7D : 0xA8;
+}
+
 VOID DrawBox(INT X1, INT Y1, INT X2, INT Y2, INT LineColor)
 {
 	D2GFX_DrawLine(X1, Y1, X2, Y1, LineColor, -1);
@@ -95,6 +163,7 @@ VOID DrawTrackedEntitiesLabels()
 
 	std::vector<RECT> drawnLabelRects;
 	const RECT drawingZone = GetSafeScreenAreaRect();
+	const POINT playerPos = GetPlayerAutomapPosition();
 	const int FONT_SIZE = 15;
 	const int LABEL_HEIGHT = 15;
 
@@ -106,6 +175,7 @@ VOID DrawTrackedEntitiesLabels()
 			POINT initialPos = {pExitInfo->ptPos.x, pExitInfo->ptPos.y};
 
 			ScreenToAutomap(&initialPos, pExitInfo->ptPos.x * 32, pExitInfo->ptPos.y * 32);
+			DrawLineFromPlayerToAutomapPoint(playerPos, initialPos, GetExitLineColor(pExitInfo, CurrentZone));
 			initialPos = AdjustAutomapLabelPosition(initialPos);
 
 			DWORD textWidth = GetTextWidth(pExitInfo->szName, FONT_SIZE);
@@ -194,6 +264,7 @@ VOID DrawTrackedEntitiesLabels()
 			POINT initialPos = {unitInfo.ptPos.x, unitInfo.ptPos.y};
 
 			ScreenToAutomap(&initialPos, unitInfo.ptPos.x * 32, unitInfo.ptPos.y * 32);
+			DrawLineFromPlayerToAutomapPoint(playerPos, initialPos, GetTrackedPresetLineColor(unitInfo));
 			initialPos = AdjustAutomapLabelPosition(initialPos);
 
 			DWORD textWidth = GetTextWidth(unitInfo.szName, FONT_SIZE);
@@ -309,7 +380,7 @@ VOID DrawNearbyEntities()
 				if (!IsValidMonster(Unit))
 					continue;
 
-				if (Unit->dwOwnerId == Me->dwUnitId)
+				if (IsOwnedByPlayer(Unit))
 					continue;
 
 				if (IsMercClassId(Unit->dwTxtFileNo))
@@ -455,49 +526,55 @@ VOID DrawNearbyEntities()
 		}
 	}
 
-	// Second pass: draw all entities in order of importance (least to most)
+	// Second pass: draw non-monsters first, then monsters in order of importance.
 	const int FONT_SIZE = 15;
 
-	// 1. Normal Monster cross
-	for (size_t i = 0; i < normalMonsters.size(); i++)
-	{
-		DrawCross(normalMonsters[i].DrawingPos.x, normalMonsters[i].DrawingPos.y, normalMonsters[i].Color);
-	}
-
-	// 2. Minions cross
-	for (size_t i = 0; i < minionMonsters.size(); i++)
-	{
-		DrawCross(minionMonsters[i].DrawingPos.x, minionMonsters[i].DrawingPos.y, minionMonsters[i].Color);
-	}
-
-	// 3. Champions cross
-	for (size_t i = 0; i < championMonsters.size(); i++)
-	{
-		DrawCross(championMonsters[i].DrawingPos.x, championMonsters[i].DrawingPos.y, championMonsters[i].Color);
-	}
-
-	// 4. Boss monsters cross
-	for (size_t i = 0; i < bossMonsters.size(); i++)
-	{
-		DrawCross(bossMonsters[i].DrawingPos.x, bossMonsters[i].DrawingPos.y, bossMonsters[i].Color);
-	}
-
-	// 5. Objects cross
+	// 1. Objects cross
 	for (size_t i = 0; i < objects.size(); i++)
 	{
 		DrawCross(objects[i].DrawingPos.x, objects[i].DrawingPos.y, objects[i].Color);
 	}
 
-	// 6. Interesting Monsters cross
-	for (size_t i = 0; i < interestingMonsters.size(); i++)
+	// 2. Normal monsters
+	for (size_t i = 0; i < normalMonsters.size(); i++)
 	{
-		DrawCross(interestingMonsters[i].DrawingPos.x, interestingMonsters[i].DrawingPos.y, interestingMonsters[i].Color);
+		DrawMonsterMarker(normalMonsters[i].DrawingPos.x, normalMonsters[i].DrawingPos.y, normalMonsters[i].Color,
+						  V_NormalMonsterMarkerStyle, V_NormalMonsterMarkerFontSize);
 	}
 
-	// 7. Actual boss monsters cross
+	// 3. Magic / champion monsters
+	for (size_t i = 0; i < championMonsters.size(); i++)
+	{
+		DrawMonsterMarker(championMonsters[i].DrawingPos.x, championMonsters[i].DrawingPos.y, championMonsters[i].Color,
+						  V_ChampionMonsterMarkerStyle, V_ChampionMonsterMarkerFontSize);
+	}
+
+	// 4. Rare / minion monsters
+	for (size_t i = 0; i < minionMonsters.size(); i++)
+	{
+		DrawMonsterMarker(minionMonsters[i].DrawingPos.x, minionMonsters[i].DrawingPos.y, minionMonsters[i].Color,
+						  V_MinionMonsterMarkerStyle, V_MinionMonsterMarkerFontSize);
+	}
+
+	// 5. Unique / boss monsters
+	for (size_t i = 0; i < bossMonsters.size(); i++)
+	{
+		DrawMonsterMarker(bossMonsters[i].DrawingPos.x, bossMonsters[i].DrawingPos.y, bossMonsters[i].Color,
+						  V_BossMonsterMarkerStyle, V_BossMonsterMarkerFontSize);
+	}
+
+	// 6. Important monsters
+	for (size_t i = 0; i < interestingMonsters.size(); i++)
+	{
+		DrawMonsterMarker(interestingMonsters[i].DrawingPos.x, interestingMonsters[i].DrawingPos.y, interestingMonsters[i].Color,
+						  V_ImportantMonsterMarkerStyle, V_ImportantMonsterMarkerFontSize);
+	}
+
+	// 7. Actual boss monsters
 	for (size_t i = 0; i < actualBossMonsters.size(); i++)
 	{
-		DrawCross(actualBossMonsters[i].DrawingPos.x, actualBossMonsters[i].DrawingPos.y, actualBossMonsters[i].Color);
+		DrawMonsterMarker(actualBossMonsters[i].DrawingPos.x, actualBossMonsters[i].DrawingPos.y, actualBossMonsters[i].Color,
+						  V_ActualBossMonsterMarkerStyle, V_ActualBossMonsterMarkerFontSize);
 	}
 
 	// 8. Object labels

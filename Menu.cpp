@@ -61,6 +61,56 @@ void ToggleFinisherSkillButtonInput()
     V_InputModeType = MODE_FINISHER_SKILL_BUTTON;
 }
 
+const char *GetMonsterMarkerStyleName(DWORD style)
+{
+    return style == MONSTER_MARKER_STYLE_CROSS ? "Cross" : "x";
+}
+
+bool IsMonsterMarkerStyleSlider(MenuItem &item)
+{
+    return item.intValue == &V_NormalMonsterMarkerStyle ||
+           item.intValue == &V_MinionMonsterMarkerStyle ||
+           item.intValue == &V_ChampionMonsterMarkerStyle ||
+           item.intValue == &V_BossMonsterMarkerStyle ||
+           item.intValue == &V_ImportantMonsterMarkerStyle ||
+           item.intValue == &V_ActualBossMonsterMarkerStyle;
+}
+
+bool IsMonsterMarkerFontSlider(MenuItem &item)
+{
+    return item.intValue == &V_NormalMonsterMarkerFontSize ||
+           item.intValue == &V_MinionMonsterMarkerFontSize ||
+           item.intValue == &V_ChampionMonsterMarkerFontSize ||
+           item.intValue == &V_BossMonsterMarkerFontSize ||
+           item.intValue == &V_ImportantMonsterMarkerFontSize ||
+           item.intValue == &V_ActualBossMonsterMarkerFontSize;
+}
+
+void AddMonsterMarkerMenuItems(std::vector<MenuItem> &column, const char *styleLabel, const char *fontLabel, DWORD *styleValue, DWORD *fontValue)
+{
+    MenuItem item;
+
+    item = MenuItem();
+    item.label = styleLabel;
+    item.type = IntSlider;
+    item.intValue = styleValue;
+    item.intMin = MONSTER_MARKER_STYLE_CROSS;
+    item.intMax = MONSTER_MARKER_STYLE_X;
+    item.indent = 1;
+    item.parentIndex = -1;
+    column.push_back(item);
+
+    item = MenuItem();
+    item.label = fontLabel;
+    item.type = IntSlider;
+    item.intValue = fontValue;
+    item.intMin = 0;
+    item.intMax = 15;
+    item.indent = 1;
+    item.parentIndex = -1;
+    column.push_back(item);
+}
+
 void InitMenu()
 {
     g_menuColumn1.clear();
@@ -440,6 +490,20 @@ void InitMenu()
     g_menuColumn3.push_back(item);
 
     item = MenuItem();
+    item.label = "Monster Icons";
+    item.type = Label;
+    item.indent = 0;
+    item.parentIndex = -1;
+    g_menuColumn3.push_back(item);
+
+    AddMonsterMarkerMenuItems(g_menuColumn3, "Normal Style", "Normal X Size", &V_NormalMonsterMarkerStyle, &V_NormalMonsterMarkerFontSize);
+    AddMonsterMarkerMenuItems(g_menuColumn3, "Magic Style", "Magic X Size", &V_ChampionMonsterMarkerStyle, &V_ChampionMonsterMarkerFontSize);
+    AddMonsterMarkerMenuItems(g_menuColumn3, "Rare Style", "Rare X Size", &V_MinionMonsterMarkerStyle, &V_MinionMonsterMarkerFontSize);
+    AddMonsterMarkerMenuItems(g_menuColumn3, "Unique Style", "Unique X Size", &V_BossMonsterMarkerStyle, &V_BossMonsterMarkerFontSize);
+    AddMonsterMarkerMenuItems(g_menuColumn3, "Important Style", "Important X Size", &V_ImportantMonsterMarkerStyle, &V_ImportantMonsterMarkerFontSize);
+    AddMonsterMarkerMenuItems(g_menuColumn3, "Actual Boss Style", "Actual Boss X Size", &V_ActualBossMonsterMarkerStyle, &V_ActualBossMonsterMarkerFontSize);
+
+    item = MenuItem();
     item.label = "Vendor Shortcuts";
     item.type = Checkbox;
     item.boolValue = &V_VendorShortcutEnabled;
@@ -563,7 +627,19 @@ void DrawMenuColumn(std::vector<MenuItem> &column, int base_x, int &currentY)
             DrawCheckBox(item.x, item.y, item.width, 6, *item.boolValue, COLOR_WHITE, FONTCOLOR_WHITE, (LPSTR)item.label);
             break;
         case IntSlider:
-            if (item.label == "Slot 1" || item.label == "Slot 2" || item.label == "Slot 3" || item.label == "Slot 4")
+            if (IsMonsterMarkerStyleSlider(item))
+            {
+                DrawIncreaseDecrease(item.x, item.y + 5, FALSE, COLOR_WHITE);
+                DrawTextB(item.x + 20, item.y + 15, FONTCOLOR_WHITE, 6, -1, "%s: %s", (LPSTR)item.label, GetMonsterMarkerStyleName(*item.intValue));
+                DrawIncreaseDecrease(item.x + 130, item.y + 5, TRUE, COLOR_WHITE);
+            }
+            else if (IsMonsterMarkerFontSlider(item))
+            {
+                DrawIncreaseDecrease(item.x, item.y + 5, FALSE, COLOR_WHITE);
+                DrawTextB(item.x + 20, item.y + 15, FONTCOLOR_WHITE, 6, -1, "%s: %d", (LPSTR)item.label, *item.intValue);
+                DrawIncreaseDecrease(item.x + 130, item.y + 5, TRUE, COLOR_WHITE);
+            }
+            else if (item.label == "Slot 1" || item.label == "Slot 2" || item.label == "Slot 3" || item.label == "Slot 4")
             {
                 const int decrease_button_x = item.x + 50;
                 const int potion_name_x = decrease_button_x + 25;
@@ -655,7 +731,7 @@ void DrawMenu()
     if (!V_MainMenuOpen)
         return;
 
-    D2GFX_DrawRectangle(25, 10, 900, 450, 0, 1);
+    D2GFX_DrawRectangle(25, 10, 900, 590, 0, 1);
     DrawTextB(30, 30, FONTCOLOR_GOLD, 7, -1, "EZPD2 Settings");
 
     int currentY = 60;
@@ -705,6 +781,9 @@ bool HandleMenuClickColumn(std::vector<MenuItem> &column, int mouseX, int mouseY
                 bool isThresholdSlider = item.type == IntSlider && strcmp(item.label, "Threshold") == 0 && item.parentIndex != -1;
                 int y_offset = isThresholdSlider ? 0 : 5;
                 int increase_button_x = isThresholdSlider ? item.x + 50 : item.x + 100;
+
+                if (IsMonsterMarkerStyleSlider(item) || IsMonsterMarkerFontSlider(item))
+                    increase_button_x = item.x + 130;
 
                 int step = 1;
                 if (GetAsyncKeyState(VK_CONTROL) & 0x8000)
